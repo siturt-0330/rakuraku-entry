@@ -347,7 +347,7 @@ hubGames.sort((a, b) => (a.cfg.order ?? 99) - (b.cfg.order ?? 99) || a.cfg.title
 const cards = hubGames
   .map(
     (g) =>
-      `          <a class="gcard" href="/game/${g.slug}"><span class="k">${esc(g.cfg.kicker)}</span><b>${esc(g.cfg.title)}</b><p>${esc(g.cfg.summary)}</p><div class="n">${g.words.length} 語 ・ ${g.cfg.courses.length} コース</div></a>`,
+      `          <a class="gcard${g.cfg.theme ? ` gcard-${g.cfg.theme}` : ''}" href="/game/${g.slug}"><span class="k">${esc(g.cfg.kicker)}</span><b>${esc(g.cfg.title)}</b><p>${esc(g.cfg.summary)}</p><div class="n">${g.words.length} 語 ・ ${g.cfg.courses.length} コース</div></a>`,
   )
   .join('\n');
 const lists = hubGames.map((g) => `          <li><a href="/game/${g.slug}/words">${esc(g.cfg.title)}の単語一覧（${g.words.length} 語）</a></li>`).join('\n');

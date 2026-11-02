@@ -32,6 +32,12 @@
       .gcard b { display: block; font-family: var(--head); font-size: 21px; margin: 6px 0 6px; }
       .gcard p { margin: 0; color: var(--sub); font-size: 14px; line-height: 1.7; }
       .gcard .n { margin-top: 12px; font-size: 12px; color: var(--mute); }
+      /* テーマのあるゲーム（game.json の theme）は、カードもゲームと同じ色にする */
+      .gcard-handotai { background: radial-gradient(420px 200px at 90% 0%, rgba(34,211,238,.2), transparent 60%), linear-gradient(135deg, #0c1730, #070e1b); border-color: rgba(120,200,255,.2); color: #e6f1ff; }
+      .gcard-handotai .k { color: #22d3ee; }
+      .gcard-handotai p { color: #aec0d6; }
+      .gcard-handotai .n { color: #8fa3bd; }
+      .gcard-handotai:hover { box-shadow: 0 18px 36px rgba(7,14,27,.35), 0 0 0 1px rgba(34,211,238,.4); }
       .hub .lead { max-width: 36em; margin: -14px auto 26px; color: var(--sub); font-size: 15px; line-height: 1.9; }
       .lists { margin: 22px 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 18px; font-size: 14px; }
       .lists a { color: var(--accent); }
