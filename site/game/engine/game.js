@@ -75,8 +75,16 @@
     $('empty').hidden = true;
   }
 
+  /**
+   * 演出の合図。テーマ（site/game/themes/<theme>.js）が document の gamefx を聞いてアニメーションを付ける。テーマがなければ何も起きない
+   */
+  function fx(type, detail) {
+    document.dispatchEvent(new CustomEvent('gamefx', { detail: Object.assign({ type: type }, detail) }));
+  }
+
   function show(id) {
     ['start', 'play-pc', 'play-sp', 'result', 'wordbook'].forEach(function (s) { $(s).hidden = s !== id; });
+    fx('screen', { id: id, el: $(id) });
     $('toast').hidden = true;
     window.scrollTo(0, 0);
     loadAds();
@@ -201,6 +209,7 @@
     G.running = false;
     clearInterval(G.countdown);
     clearTimeout(G.nextTimer);
+    clearTimeout(G.endTimer);
   }
 
   function record(w, ok) {
@@ -228,7 +237,8 @@
 
   // ---- パソコン：ベルトコンベア ----
   // ES は 1 枚ずつ流す。打ち終わったら（または右に落ちたら）次の 1 枚が左から入ってくる
-  var CARD_W = 150, EDGE = 16, FAST = 900;
+  // カードの幅は game.json の cardWidth で変えられる（テーマで大きいカードにするとき）
+  var CARD_W = CFG.cardWidth || 150, EDGE = 16, FAST = 900;
   // 意味の 2 択を出す間隔（語数）
   var QUIZ_EVERY = 5;
 
@@ -252,13 +262,15 @@
     var n = 3;
     $('countdown').hidden = false;
     $('countdown').textContent = n;
+    fx('count', { n: n });
     G.countdown = setInterval(function () {
       n--;
-      if (n > 0) { $('countdown').textContent = n; return; }
+      if (n > 0) { $('countdown').textContent = n; fx('count', { n: n }); return; }
       clearInterval(G.countdown);
       $('countdown').hidden = true;
       G.running = true;
       G.last = performance.now();
+      fx('go', { sec: G.course.sec });
       spawn();
       requestAnimationFrame(tick);
     }, 650);
@@ -269,13 +281,17 @@
     if (!w) return;
     var el = document.createElement('div');
     el.className = 'es';
-    el.innerHTML = '<div class="t"><span>' + esc(CFG.card) + '</span><span>No.' + (G.n = (G.n || 0) + 1) + '</span></div>' +
-      '<div class="w' + (w.w.length >= 3 ? ' long' : '') + '">' + esc(w.w) + '</div>' +
+    // テーマ（games/<slug>/game.json の theme）がレベルごとのイラストを出せるように、レベルを持たせる
+    el.dataset.lv = w.lv;
+    if (w.st) el.dataset.st = w.st;
+    el.innerHTML = '<i class="il"></i>' + (w.st ? '<span class="ct">' + esc(stLabel(w.st)) + '</span>' : '') + '<div class="t"><span>' + esc(CFG.card) + '</span><span>No.' + (G.n = (G.n || 0) + 1) + '</span></div>' +
+      '<div class="w' + (w.w.length >= 3 ? ' long' : '') + (w.w.length >= 6 ? ' xlong' : '') + (w.w.length >= 9 ? ' xxlong' : '') + (w.w.length >= 12 ? ' xxxlong' : '') + '">' + esc(w.w) + '</div>' +
       '<div class="m"><b>意味</b>' + esc(w.m) + '</div>';
     $('cards').appendChild(el);
     // 打つのは言い回し（例：義憤を覚える）。言葉の読みが 2 通りあるときは、どちらの読みでもよい
     var readings = [w.y].concat(w.alt || []).map(function (y) { return (w.pre || '') + y + (w.post || ''); });
     var card = { w: w, el: el, x: -CARD_W, word: new window.Romaji.Word(readings), state: 'wait' };
+    fx('spawn', { el: el, w: w });
     G.cards.push(card);
     place(card);
     setTarget();
@@ -295,8 +311,41 @@
     renderGuide();
   }
 
+  /**
+   * 工程の流れ図（game.json の steps）。言葉の st がその工程なら光らせる。ranges の名前なら範囲ごと、others の名前なら流れの外の言葉として見出しを出す
+   */
+  /** 工程の短い名前（カードのイラストの下に出す）。steps の名前か、game.json の stLabels */
+  function stLabel(st) {
+    var s = (CFG.steps || []).filter(function (x) { return x.id === st; })[0];
+    return s ? s.name : (CFG.stLabels || {})[st] || '';
+  }
+
+  function renderProc(box, w) {
+    if (!box || !CFG.steps) return;
+    // 打つたびに呼ばれるので、言葉が変わったときだけ描き直す
+    if (box.dataset.w === (w ? w.w : '')) return;
+    box.dataset.w = w ? w.w : '';
+    var st = w && w.st;
+    var range = (CFG.ranges || {})[st];
+    var ids = CFG.steps.map(function (s) { return s.id; });
+    var on = function (id) {
+      if (range) return ids.indexOf(id) >= ids.indexOf(range[0]) && ids.indexOf(id) <= ids.indexOf(range[1]);
+      return id === st;
+    };
+    var other = (CFG.others || {})[st];
+    box.hidden = !w;
+    var step = CFG.steps.filter(function (s) { return s.id === st; })[0];
+    // 見出し：流れの外の言葉はその説明、範囲の言葉は ranges の 3 つ目（説明）、1 つの工程なら工程の名前
+    var head = other || (range ? range[2] || '' : step ? '製造工程：' + step.name : '');
+    box.innerHTML = '<div class="ph">' + esc(head) + '</div><ol>' +
+      CFG.steps.map(function (s, i) { return '<li data-st="' + s.id + '" style="--i:' + i + '"' + (on(s.id) ? ' class="on"' : '') + '><i></i><span>' + esc(s.name) + '</span></li>'; }).join('') + '</ol>';
+    box.classList.toggle('other', !!other);
+    fx('target', { box: box, w: w });
+  }
+
   function renderGuide() {
     var t = target();
+    renderProc($('proc'), t && t.w);
     if (!t) { $('sent').innerHTML = ''; $('sent').dataset.w = ''; $('yomi').innerHTML = ''; $('roma').innerHTML = ''; return; }
     var w = t.w;
     // 例文全体を出し、打つ言い回しの部分に色をつける。意味は言い回しの真上に出す（打つときに目に入るように）
@@ -349,7 +398,7 @@
     // 右端から落ちた ES
     G.cards = G.cards.filter(function (c) {
       if (c.x > width) {
-        if (c.state === 'wait') { record(c.w, false); G.combo = 0; $('combo').textContent = ''; }
+        if (c.state === 'wait') { record(c.w, false); G.combo = 0; $('combo').textContent = ''; fx('drop', { el: c.el, w: c.w }); }
         c.el.remove();
         return false;
       }
@@ -414,6 +463,7 @@
     G.keys++;
     if (t.word.input(ch)) {
       G.score += Math.round(10 * (1 + Math.min(G.combo, 30) * 0.05));
+      fx('key', { el: t.el, w: t.w });
       if (t.word.done()) complete(t);
       else renderGuide();
     } else {
@@ -424,6 +474,7 @@
       box.classList.remove('shake');
       void box.offsetWidth;
       box.classList.add('shake');
+      fx('miss', { el: t.el, w: t.w });
     }
     $('score').textContent = G.score.toLocaleString();
   }
@@ -441,6 +492,7 @@
     G.score += 30 + G.combo * 5;
     $('combo').textContent = G.combo >= 3 ? '×' + G.combo + ' COMBO' : '';
     record(card.w, true);
+    fx('done', { el: card.el, w: card.w, combo: G.combo });
     G.recent.push(card.w);
     setTarget();
     // QUIZ_EVERY 語打つごとに、少し前に打った言葉の意味を 2 択で聞く（直前の言葉だと簡単すぎるので外す）
@@ -496,6 +548,7 @@
       if (o === q.w) btns[j].classList.add('right');
       else if (j === i) btns[j].classList.add('wrong');
     });
+    fx('answer', { ok: ok, btn: btns[i] });
     $('score').textContent = G.score.toLocaleString();
     // 正解・不正解と例文を少し見せてから戻る（キーで先へ進める）
     $('qz').querySelector('.q').innerHTML = '<span class="exs">' + exampleHTML(q.w) + '</span>';
@@ -530,9 +583,13 @@
     clearTimeout(G.nextTimer);
     var w = nextWord();
     if (!w) return finish();
+    fx('question', { w: w });
     G.cur = w;
     G.answered = false;
     $('q-word').textContent = w.w;
+    $('q-word').parentNode.dataset.lv = w.lv;
+    if (w.st) $('q-word').parentNode.dataset.st = w.st;
+    renderProc($('proc-sp'), w);
     $('q-yomi').textContent = '';
     $('q-ask').hidden = false;
     $('q-ex').hidden = true;
@@ -556,6 +613,7 @@
     G.maxCombo = Math.max(G.maxCombo, G.combo);
     record(G.cur, ok);
     pressKey(btn);
+    fx('answer', { ok: ok, btn: btn, combo: G.combo });
     Array.prototype.forEach.call($('opts').querySelectorAll('[data-w]'), function (b) {
       if (b.dataset.w === G.cur.w) b.classList.add('right');
       else if (b === btn) b.classList.add('wrong');
@@ -588,6 +646,13 @@
   // ---- 結果 ----
   function finish() {
     stop();
+    // テーマが終わりの演出（ステージが暗くなる）を見せる時間。game.json の finishDelay（ミリ秒）
+    fx('ending', {});
+    var g = G;
+    G.endTimer = setTimeout(function () { if (G === g) showResult(); }, CFG.finishDelay || 0);
+  }
+
+  function showResult() {
     show('result');
     var ok = G.results.filter(function (r) { return r.ok; });
     var ng = G.results.filter(function (r) { return !r.ok; });
@@ -615,6 +680,7 @@
     $('share').href = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(text) + '&url=' + encodeURIComponent(CFG.url + '/r/' + rankAt) + '&hashtags=' + encodeURIComponent(CFG.hashtags.join(','));
     G.tab = 'all';
     renderBook();
+    fx('finish', { score: G.score, best: isBest && G.score > 0, rankAt: rankAt });
   }
 
   function renderBook() {

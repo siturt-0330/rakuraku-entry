@@ -400,6 +400,15 @@
         .mp-bar { display: none; }
         .mp-frame img { height: 460px; object-fit: cover; object-position: top; }
       }
+      /* 半導体用語タイピング：ゲームと同じ濃紺のブロック */
+      .hd-box { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 40px; align-items: center; border-radius: 32px; padding: 48px; color: #e6f1ff;
+        background: radial-gradient(700px 400px at 90% 0%, rgba(34, 211, 238, .18), transparent 60%), linear-gradient(135deg, #0c1730, #070e1b); box-shadow: 0 30px 80px rgba(7, 14, 27, .35); }
+      .hd-box h2 { color: #e6f1ff; font-size: clamp(22px, 2.3vw, 30px); margin-bottom: 26px; }
+      .hd-grad { background: linear-gradient(90deg, #22d3ee, #34d399 60%, #a3e635); -webkit-background-clip: text; background-clip: text; color: transparent; }
+      .hd-btn { background: linear-gradient(90deg, #22d3ee, #34d399); color: #04121c; }
+      .hd-link { color: #22d3ee !important; }
+      .hd-shot img { border-radius: 18px; box-shadow: 0 0 0 1px rgba(120, 200, 255, .18), 0 30px 60px rgba(0, 0, 0, .45); }
+      @media (max-width: 900px) { .hd-box { grid-template-columns: minmax(0, 1fr); padding: 28px 22px; } }
     </style>
   </head>
   <body>
@@ -408,6 +417,7 @@
       <div class="links">
         <a href="https://app.rakuraku-entry.com/companies">マイページ管理</a>
         <a href="/game">SPI 用語集</a>
+        <a href="/game/handotai">半導体用語</a>
         <a href="/column">コラム</a>
       </div>
       <a class="btn btn-dark store-link" href="https://chromewebstore.google.com/detail/kdppelkdplekjbiehpodfmmfcpbbfeho?utm_source=rakuraku-entry.com&amp;utm_campaign=top" target="_blank" rel="noopener"><span class="lg">Chrome に追加</span><span class="sm">無料で入手</span></a>
@@ -418,7 +428,7 @@
         <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
         <div class="wrap">
           <div>
-            <span class="eyebrow"><b>NEW</b>就活生のための Chrome 拡張機能</span>
+            <span class="eyebrow">就活生のための Chrome 拡張機能</span>
             <h1><span class="nb">エントリーの入力は、</span><br /><span class="grad nb">ワンクリックで終わり。</span></h1>
             <p class="lead">氏名、フリガナ、生年月日、住所、大学名。企業ごとに形式がバラバラな応募フォームに、一度登録したプロフィールを自動で入力します。</p>
             <div class="actions">
@@ -447,7 +457,6 @@
 
       <section>
         <div class="wrap center">
-          <div class="kicker">Problem</div>
           <h2><span class="nb">就活生の、</span><span class="nb">エントリーあるある。</span></h2>
           <p class="sec-lead">応募する企業が増えるほど、手入力の時間とミスも増えていきます。</p>
           <div class="tweets">
@@ -473,7 +482,6 @@
 
       <section id="features" style="padding-top:0;scroll-margin-top:100px">
         <div class="wrap">
-          <div class="kicker">Features</div>
           <h2><span class="nb">らくらくエントリーなら、</span><span class="nb">全部まかせられる。</span></h2>
           <p class="sec-lead">フォームの形式を読み取って、それぞれの欄に合った書き方で入力します。</p>
           <div class="feat">
@@ -507,7 +515,6 @@
 
       <section style="padding-top:0">
         <div class="wrap center">
-          <div class="kicker">Fields</div>
           <h2><span class="nb">氏名から資格まで、</span><span class="nb">まるごと入力。</span></h2>
           <div style="height:28px"></div>
         </div>
@@ -525,7 +532,6 @@
 
       <section id="how" style="background:var(--paper)">
         <div class="wrap">
-          <div class="kicker">How it works</div>
           <h2>使い方は、3ステップ。</h2>
           <p class="sec-lead">最初に一度プロフィールを登録すれば、あとはクリックするだけです。実際の操作は約30秒です。</p>
           <div class="howto-video" data-howto></div>
@@ -535,7 +541,6 @@
       <section id="sophon">
         <div class="wrap sophon">
           <div>
-            <div class="kicker">AI · Sophon</div>
             <h2><span class="nb">迷う欄は、</span><span class="nb">AI「Sophon」が判断。</span></h2>
             <p class="sec-lead">「保護者連絡先」「休暇中の住所」など、企業ごとに呼び方が違う欄も、Sophon が見出しを読んで、どの項目を入れるかを判断します。</p>
           </div>
@@ -564,7 +569,6 @@
       <section id="mypage">
         <div class="wrap mp">
           <div>
-            <div class="kicker">My page</div>
             <h2><span class="nb">受けている会社の</span><br /><span class="nb">マイページを一元管理</span></h2>
             <a class="btn btn-dark btn-big" href="https://app.rakuraku-entry.com/companies">マイページ管理を使う（無料）</a>
           </div>
@@ -594,7 +598,6 @@
             <div class="mp-chip" aria-hidden="true"><b>膠着</b>ある状態のまま動かなくなること<em>済</em></div>
           </div>
           <div>
-            <div class="kicker">SPI words</div>
             <h2><span class="nb">SPI の言葉を、</span><br /><span class="nb">打って覚える</span></h2>
             <div class="spi-modes"><span>300 語</span><span>タイピング</span><span><b class="pc-key">F</b><b class="pc-key">J</b>意味クイズ</span><span>単語帳</span></div>
             <a class="btn btn-dark btn-big" href="/game">SPI 用語集で遊ぶ（無料）</a>
@@ -603,9 +606,20 @@
         </div>
       </section>
 
+      <section id="handotai" style="padding-top:40px">
+        <div class="wrap">
+          <div class="hd-box">
+            <div>
+              <h2><span class="nb">半導体業界を受けるなら、</span><br /><span class="nb hd-grad">業界の言葉を打って覚える</span></h2>
+              <a class="btn btn-big hd-btn" href="/game/handotai">半導体用語タイピングで遊ぶ（無料）</a>
+              <p class="spi-list"><a href="/game/handotai/words" class="hd-link">半導体業界の用語一覧（読み・意味・例文）を見る →</a></p>
+            </div>
+            <div class="hd-shot"><img src="/images/handotai-game.png" width="1180" height="640" loading="lazy" alt="半導体用語タイピングの画面。初心者・中級者・上級者などのコースを選んで始める" /></div>
+          </div>
+        </div>
+      </section>
       <section id="pricing">
         <div class="wrap center">
-          <div class="kicker">Pricing</div>
           <h2>料金</h2>
           <p class="sec-lead">いまは、すべての機能を無料で使えます。</p>
         </div>
@@ -626,7 +640,7 @@
             <div class="plan later">
               <span class="tagline">準備中</span>
               <h3>プレミアム</h3>
-              <div class="price" style="color:var(--mute)">Coming soon</div>
+              <div class="price" style="color:var(--mute)">近日公開</div>
               <ul>
                 <li>AI 判定の回数の上限アップ</li>
                 <li>マイページ管理のデータを PC とスマホで同期</li>
@@ -639,7 +653,7 @@
 
       <section id="faq" style="padding-top:0;scroll-margin-top:100px">
         <div class="wrap">
-          <div class="center"><div class="kicker">FAQ</div><h2>よくある質問</h2><div style="height:28px"></div></div>
+          <div class="center"><h2>よくある質問</h2><div style="height:28px"></div></div>
           <div class="faq">
             <details><summary>料金はかかりますか？</summary><p>現在はすべての機能を無料で使えます。今後、より便利な機能を含む有料プラン（サブスクリプション）を追加する予定です。</p></details>
             <details><summary>個人情報はどこに保存されますか？</summary><p>氏名や住所などのプロフィールと、マイページのパスワードは、あなたのブラウザ（Chrome）の中にだけ保存します。運営者のサーバーには送りません。詳しくは<a href="/privacy">プライバシーポリシー</a>をご覧ください。</p></details>
@@ -654,7 +668,6 @@
         <div class="wrap">
           <div class="final">
             <div class="blob b1" style="top:-200px;left:-100px"></div><div class="blob b2" style="top:-60px;right:-160px"></div>
-            <div class="kicker">Get started</div>
             <h2><span class="nb">次のエントリーから、</span><br /><span class="nb">入力はらくらくに。</span></h2>
             <p class="sec-lead">Chrome に追加して、プロフィールを入れるだけ。</p>
             <a class="btn btn-dark btn-big store-link" href="https://chromewebstore.google.com/detail/kdppelkdplekjbiehpodfmmfcpbbfeho?utm_source=rakuraku-entry.com&amp;utm_campaign=top" target="_blank" rel="noopener"><span class="soon-dot"></span>Chrome に無料で追加</a>
@@ -669,6 +682,7 @@
         <span class="brand"><img src="/images/icon.svg" alt="" />らくらくエントリー</span>
         <a href="https://app.rakuraku-entry.com/companies">マイページ管理（Web版）</a>
         <a href="/game">SPI 用語集</a>
+        <a href="/game/handotai">半導体用語タイピング</a>
         <a href="/game/spi-goi/words">SPI 語彙一覧</a>
         <a href="/privacy">プライバシーポリシー</a>
         <span>運営：齋藤稜太</span>

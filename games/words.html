@@ -23,6 +23,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&family=Inter:wght@500;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/game/engine/game.css?v={{version}}" />
+    {{themeCss}}
     <style>
       .wl { max-width: 980px; margin: 0 auto; }
       .wl h1 { font-family: var(--head); font-weight: 900; font-size: clamp(26px, 3.4vw, 38px); line-height: 1.35; margin: 10px 0 14px; }
@@ -58,11 +59,11 @@
     </style>
     <script type="application/ld+json">{{jsonLd}}</script>
   </head>
-  <body>
+  <body{{themeClass}}>
     <header class="top">
       <a class="brand" href="/"><img src="/images/icon.svg" alt="" width="26" height="26" />らくらくエントリー</a>
       <span class="sp"></span>
-      <a class="link" href="/game">SPI 用語集</a>
+      {{hubLink}}
       <a class="link ext" href="/">拡張機能について</a>
     </header>
     <main class="wrap">
@@ -70,7 +71,7 @@
         <nav aria-label="パンくずリスト">
           <ol class="crumbs">
             <li><a href="/">らくらくエントリー</a></li>
-            <li><a href="/game">SPI 用語集</a></li>
+            {{hubCrumb}}
             <li><a href="{{gamePath}}">{{title}}</a></li>
             <li aria-current="page">単語一覧</li>
           </ol>
@@ -91,7 +92,8 @@
         </div>
       </article>
     </main>
-    <footer>© らくらくエントリー ・ <a href="/game">SPI 用語集</a> ・ <a href="/privacy">プライバシーポリシー</a></footer>
+    <footer>© らくらくエントリー ・ {{hubFoot}}<a href="/privacy">プライバシーポリシー</a></footer>
     <!-- Cloudflare Web Analytics（アクセス解析。Cookie は使わない） --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "bfa5d22bd9ef4d3e8c71de69bad08fa1"}'></script><!-- End Cloudflare Web Analytics -->
+    {{themeJs}}
   </body>
 </html>
