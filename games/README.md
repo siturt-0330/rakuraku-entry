@@ -52,6 +52,7 @@ site/game/
 | `order` | ゲーム一覧での並び（小さいほど先） |
 | `ogWord` | シェア画像のカードに出す言葉（なければ最初の言葉） |
 | `standalone` | `true` にすると SPI 用語集とは別のゲームとして扱う（ゲーム一覧・パンくず・見出しのリンクに出さない） |
+| `hub` | `standalone` のゲームでも、`true` ならゲーム一覧（/game）にカードを出す |
 | `theme` | ゲーム専用の見た目。`site/game/themes/<theme>.css` を読み込み、`<body class="theme-<theme>">` にする |
 | `cardWidth` | ベルトに流れるカードの幅（px。テーマで大きいカードにするとき。なければ 150） |
 | `steps` / `ranges` / `others` / `stLabels` | 工程の流れ図。`steps` は工程の並び（`id`・`name`）、`ranges` は範囲の言葉（`[最初の工程, 最後の工程, 見出し]`）、`others` は流れの外の言葉の見出し、`stLabels` はカードに出す短い分類名。言葉の `st` にどれかの名前を書くと、プレイ中にその工程を光らせる |

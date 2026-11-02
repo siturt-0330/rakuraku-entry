@@ -341,8 +341,8 @@ for (const g of games) {
   console.log(`${listPath}  単語一覧`);
 }
 
-// ゲームの一覧（standalone のゲームは SPI 用語集とは別のものとして、一覧に載せない）
-const hubGames = games.filter((g) => !g.cfg.standalone);
+// ゲームの一覧（standalone のゲームは SPI 用語集とは別のものとして一覧に載せない。hub: true なら載せる）
+const hubGames = games.filter((g) => !g.cfg.standalone || g.cfg.hub);
 hubGames.sort((a, b) => (a.cfg.order ?? 99) - (b.cfg.order ?? 99) || a.cfg.title.localeCompare(b.cfg.title));
 const cards = hubGames
   .map(
