@@ -358,3 +358,7 @@
   .theme-handotai .wrow { grid-template-columns: 22px minmax(0, max-content) minmax(0, 1fr) auto; }
   .theme-handotai .wrow b { font-size: 15px; }
 }
+
+/* 文字の色（--ink）を背景に使っていたところ：通知と、日本語入力のままのときの注意。暗い面に明るい文字にする */
+.theme-handotai :is(.toast, .ime) { background: #13213a; color: #e6f1ff; border: 1px solid rgba(34, 211, 238, .45); box-shadow: 0 14px 34px rgba(0, 0, 0, .5); }
+.theme-handotai .toast button { background: rgba(34, 211, 238, .18); color: #a5f3fc; }
