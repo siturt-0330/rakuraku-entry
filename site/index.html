@@ -150,6 +150,7 @@
   .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
   .nav .store-link .sm { display: none; }
   @media (max-width: 600px) { .nav .store-link .lg { display: none; } .nav .store-link .sm { display: inline; } }
+  @media (max-width: 360px) { .nav .wrap { gap: 8px; padding: 0 16px; } .nav .brand { font-size: 15px; gap: 8px; } .nav .brand img { width: 24px; height: 24px; } .nav .btn { padding: 8px 12px; font-size: 13px; } }
   @media (max-width: 1100px) { .cards { grid-template-columns: repeat(2, 1fr); } }
   .card { background: #fff; border-radius: 22px; padding: 26px 24px; border: 1px solid var(--line); display: flex; flex-direction: column; transition: transform .15s, box-shadow .15s; }
   .card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(20,22,40,.08); }
