@@ -172,16 +172,43 @@ function labelText(el: HTMLElement): string {
  * `<span>姓：</span><span><input></span>` のように欄が包まれているときは、包んでいる要素の外側も見る
  */
 function siblingText(el: HTMLElement, dir: 1 | -1, max: number): string {
-  let target: HTMLElement = el;
+  // 「［150］-［0041］」のようにダッシュでつないだ分割の欄は、ひとまとまりとして前の見出しを見る
+  // （2つ目の欄の前は「-」だけで、見出しを探すと外側の「現住所」まで行ってしまう）
+  const run = dir === -1 ? dashRun(el) : [el];
+  let target: HTMLElement = run[0]!;
   for (let i = 0; i < 3; i++) {
     const t = adjacentText(target, dir, max);
     if (t) return t;
     const parent = target.parentElement;
     if (!parent || /^(TD|TH|DD|DT|TR|LI|FORM|BODY|FIELDSET)$/.test(parent.tagName)) break;
-    if (parent.querySelectorAll(VISIBLE_CONTROLS).length > 1) break;
+    if (parent.querySelectorAll(VISIBLE_CONTROLS).length > run.length) break;
     target = parent;
   }
   return '';
+}
+
+/** 区切りのダッシュだけの文字（見た目が同じで文字が違うものをそろえて書く。NOT_A_HEADING と同じ並び） */
+const DASH_ONLY = /^[\s\-‐‑‒–—―−ー－ｰ]*$/;
+
+/** el と、ダッシュ（か空白）だけをはさんで隣り合う文字欄の並び（郵便番号の上3桁・下4桁、電話番号の3分割） */
+function dashRun(el: HTMLElement): HTMLElement[] {
+  if (!(el instanceof HTMLInputElement) || !/^(text|tel|number|)$/.test(el.type)) return [el];
+  const step = (from: HTMLElement, dir: 1 | -1): HTMLElement | null => {
+    let n: Node | null = dir === 1 ? from.nextSibling : from.previousSibling;
+    let dash = false;
+    // 区切りは文字そのものか、<span>-</span> のような要素
+    while (n && (n.nodeType === Node.TEXT_NODE || (n instanceof HTMLElement && !isControl(n) && !n.querySelector(VISIBLE_CONTROLS)))) {
+      const t = n.textContent ?? '';
+      if (!DASH_ONLY.test(t)) return null;
+      if (t.trim()) dash = true;
+      n = dir === 1 ? n.nextSibling : n.previousSibling;
+    }
+    return dash && n instanceof HTMLInputElement && n.type === el.type ? n : null;
+  };
+  const run: HTMLElement[] = [el];
+  for (let n = step(el, -1); n && run.length < 4; n = step(n, -1)) run.unshift(n);
+  for (let n = step(el, 1); n && run.length < 4; n = step(n, 1)) run.push(n);
+  return run;
 }
 
 function adjacentText(el: HTMLElement, dir: 1 | -1, max: number): string {
@@ -245,8 +272,9 @@ function structuralHeader(el: HTMLElement): string {
       const t = textOf(node.querySelector('legend'), 60);
       if (t) return t;
     }
-    // <div role="group" aria-labelledby="…"> の見出し（axol の「入学年月」など。年・月の欄には「年」「月」のラベルしかない）
-    const labelledby = /^(group|radiogroup)$/.test(node.getAttribute('role') ?? '') ? node.getAttribute('aria-labelledby') : null;
+    // <div role="group" aria-labelledby="…"> の見出し（axol の「入学年月」など。年・月の欄には「年」「月」のラベルしかない）。
+    // role のない <span aria-labelledby="…"> で欄を包むものも同じ（axol の郵便番号の上3桁・下4桁。外側のグループは「現住所」）
+    const labelledby = node.getAttribute('aria-labelledby');
     if (labelledby) {
       const doc = node.ownerDocument;
       const t = labelledby
@@ -346,6 +374,8 @@ function isHeadingLike(el: Element): boolean {
 function sectionText(el: HTMLElement): string {
   // 欄の入った dd の手前の dt は、その欄の見出し（「郵便番号」）で、区切りの見出しではない
   const ownDd = el.closest('dd');
+  // 欄のすぐ前の「<span>郵便番号</span>」は欄そのものの見出しで、区切り（「帰省先」）ではない
+  const own = siblingText(el, -1, 40);
   let node: Element | null = el;
   for (let depth = 0; node && depth < 8; depth++, node = node.parentElement) {
     let sib = node.previousElementSibling;
@@ -354,6 +384,7 @@ function sectionText(el: HTMLElement): string {
       if (!isHeadingLike(sib)) continue;
       // 先頭の「*」は必須の印（「*出身高校名を入力してください。」）なので外して見る
       const t = textOf(sib, 40).replace(/^[*＊]\s*/, '');
+      if (own && t === own) continue;
       // 「例（111-0000）」や「※〜」の注意書きは見出しではない
       if (!t || t.length > 40 || NOT_A_HEADING.test(t) || /^※/.test(t)) continue;
       return t;
@@ -583,6 +614,8 @@ function assignGroups(fields: ScannedField[]) {
       cur &&
       cur.context &&
       cur.context === prev.context &&
+      // 区切りの見出しが違う欄（「現住所」の郵便番号と「帰省先」の郵便番号）は、見出しが同じでも別のグループ
+      cur.section === prev.section &&
       sameFamily(cur.kind, prev.kind) &&
       // 「内線」の欄は電話番号の3分割に含めない
       !/内線|\bext\b/i.test(`${cur.prefix} ${cur.label}`) &&

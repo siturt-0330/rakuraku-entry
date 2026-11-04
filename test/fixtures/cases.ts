@@ -2084,6 +2084,30 @@ export const CASES: Case[] = [
       expect: { '[name=school_from_Y]': '2022', '[name=school_from_m]': '4', '[name=school_to_Y]': '2026', '[name=school_to_m]': '3' },
     } satisfies Case;
   })(),
+  {
+    // axol（伊藤園）：「現住所」のグループ（role=group aria-labelledby）の中に郵便番号・市区郡町村などの小さな項目があり、
+    // 郵便番号の上3桁・下4桁は aria-label しかなく、項目名「郵便番号」は外側の <span aria-labelledby> で付く
+    name: 'axol（伊藤園）：「現住所」のグループの中の郵便番号（上3桁・下4桁）に住所を入れない',
+    html: `<form><div class="form__item" role="group" aria-labelledby="item_jushog">
+      <div id="item_jushog" class="form__item__title__wrap"><div class="form__item__title">現住所</div></div>
+      <div class="need__item"><strong class="mark">必須</strong></div>
+      <div class="form__item__multi jusho_g">
+        <div class="notice__wrap"><p id="notice_kaigaig" class="notice__example">日本国外の場合はチェックしてください。<br>（海外向け入力欄が表示されます）</p>
+          <label><input aria-describedby="notice_kaigaig" name="kaigaig" value="1" type="checkbox"> <span>日本国外の場合</span></label></div>
+        <div class="form__item item__input"><div class="form__item__title__wrap"><div id="title_yubing" class="form__item__title">郵便番号</div><strong class="need__sub">必須</strong></div>
+          <div class="form__item__group">
+            <div class="jsJushoKaigaiG type__postal kaigai__g fb_checkpoint" style="display: none;"><input aria-labelledby="title_yubing" size="20" placeholder="郵便番号" type="text" name="yubing_kaigai"></div>
+            <div class="jsJushoJapanG type__postal fb_checkpoint" role="group" style="display: flex;"><span aria-labelledby="title_yubing" name="yubing"><input aria-label="上3桁" name="yubing_h" type="text" size="3" required> - <input aria-label="下4桁" name="yubing_l" type="text" size="4" required></span><input type="button" class="btn sm other search_g" aria-label="郵便番号から検索" value="郵便番号から検索"></div>
+          </div></div>
+        <div class="form__item item__input"><div class="form__item__title__wrap"><div id="title_keng" class="form__item__title">都道府県</div></div>
+          <div class="form__item__group type__prefectures fb_checkpoint"><span class="select_wrap"><select id="keng" aria-labelledby="title_keng" name="keng" required><option value="">（選択してください）</option>${['北海道', '東京都', '大阪府'].map((p, i) => `<option value="${i + 1}">${p}</option>`).join('')}</select></span></div></div>
+        <div class="form__item item__input"><div class="form__item__title__wrap"><div id="title_jushog1" class="form__item__title">市区郡町村</div></div>
+          <div class="form__item__group fb_checkpoint"><input aria-labelledby="title_jushog1" size="30" placeholder="現住所(市区郡町村)" type="text" name="jushog1" required></div></div>
+        <div class="form__item item__input"><div class="form__item__title__wrap"><div id="title_jushog2" class="form__item__title">町域・番地</div><span id="caption_jushog2" class="caption__text">記入例 ３－３－３</span></div>
+          <div class="form__item__group fb_checkpoint"><input aria-labelledby="title_jushog2" aria-describedby="caption_jushog2" size="30" placeholder="現住所(町域・番地)" type="text" name="jushog2" required></div></div>
+      </div></div></form>`,
+    expect: { '[name=yubing_h]': '150', '[name=yubing_l]': '0041', '[name=keng]': '2', '[name=jushog1]': '渋谷区', '[name=jushog2]': '神南1-2-3' },
+  },
   // ---- 第9弾：i-webs（東レ）の学歴の欄 ----
   {
     name: 'i-webs（東レ）：最終学歴となる大学（院）の入学年月に入れ、博士の方だけの修士課程の欄には入れない',

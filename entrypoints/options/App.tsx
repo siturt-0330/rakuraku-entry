@@ -501,26 +501,35 @@ function QualificationsEditor({ profile, update }: EditorProps) {
   );
 }
 
+const LOCATIONS = ['全国', '首都圏', '関西', ...PREFECTURES];
+
 function LocationsEditor({ profile, update }: EditorProps) {
   const set = (i: number, v: string) => update({ desiredLocations: profile.desiredLocations.map((l, j) => (j === i ? v : l)) });
+  // datalist だと、選んだあとは入っている文字に合う候補しか出ず選び直せないので、select にする
   return (
     <div className="sub">
       <div className="field-title">希望勤務地</div>
       <div className="locations">
-        {['第1希望', '第2希望', '第3希望'].map((label, i) => (
-          <label className="field" key={label}>
-            <span className={profile.desiredLocations[i] ? 'fl filled' : 'fl'}>
-              <span className="fl-label">{label}</span>
-              <input list="prefectures" value={profile.desiredLocations[i] ?? ''} onChange={(e) => set(i, e.target.value)} placeholder={['東京都', '大阪府', '全国'][i]} />
-            </span>
-          </label>
-        ))}
+        {['第1希望', '第2希望', '第3希望'].map((label, i) => {
+          const value = profile.desiredLocations[i] ?? '';
+          return (
+            <label className="field" key={label}>
+              <span className={value ? 'fl filled' : 'fl'}>
+                <span className="fl-label">{label}</span>
+                <select value={value} onChange={(e) => set(i, e.target.value)}>
+                  <option value="" />
+                  {/* 前に手で入れた、一覧にない値（「関東」など）も残す */}
+                  {value && !LOCATIONS.includes(value) && <option>{value}</option>}
+                  {LOCATIONS.map((p) => (
+                    <option key={p}>{p}</option>
+                  ))}
+                </select>
+                <ChevronDown size={16} className="fl-chev" />
+              </span>
+            </label>
+          );
+        })}
       </div>
-      <datalist id="prefectures">
-        {['全国', '首都圏', '関西', ...PREFECTURES].map((p) => (
-          <option key={p} value={p} />
-        ))}
-      </datalist>
     </div>
   );
 }

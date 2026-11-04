@@ -740,7 +740,7 @@ export function computeHints(d: FieldDescriptor): Hints {
   let hyphen: Hints['hyphen'] = null;
   // pattern・inputmode が数字だけ（\d{10,11}・[0-9]{7}・numeric）ならハイフンは打てない
   const digitsOnly = /numeric|\\d|0-9/.test(code) && !/[\-‐－]|\+/.test(code.replace(/data-[\w-]+|\w-\w/g, ''));
-  if (digitsOnly || /ハイフン[（(]?[\-‐‑‒–—―−ー－ｰ]?[）)]?(なし|無し|不要|を除|は不要|抜き|を入れず|は入れず)|ハイフンを?入れないで|[\-‐‑‒–—―−ー－ｰ]なし|数字のみ|[\d０-９]+桁/.test(text)) hyphen = false;
+  if (digitsOnly || /ハイフン[（(]?[\-‐‑‒–—―−ー－ｰ]?[）)]?(なし|無し|不要|を除|は不要|抜き|を入れず|は入れず)|ハイフンを?入れないで|[\-‐‑‒–—―−ー－ｰ]なし|[「『"”]?[\-‐‑‒–—―−ー－ｰ][」』"”]?\s*(は|を)?\s*(入れず|入れない|不要|除|省)|数字のみ|[\d０-９]+桁/.test(text)) hyphen = false;
   else if (/ハイフン(あり|有り|を含|付き|を入れて)/.test(text)) hyphen = true;
   else if (/\d[\-‐‑‒–—―−ー－ｰ]\d/.test(d.placeholder)) hyphen = true;
   else if (/^\d{7,11}$/.test(norm(d.placeholder).replace(/^例[:：)）]?\s*/, '')) || /例[:：)）]?\s*\d{7,11}(?![\d\-])/.test(norm(d.rules))) hyphen = false;
