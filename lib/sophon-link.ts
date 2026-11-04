@@ -91,7 +91,7 @@ export const isNewer = (a: { updatedAt?: string } | null | undefined, b: { updat
 
 // ---- 応募ページの企業を見分ける ----
 
-/** 複数の企業が同じドメインを使う採用管理サービス。パスの1段目まで一致したときだけ同じ企業とみなす */
+/** 複数の企業が同じドメインを使う採用管理サービス。企業を表すパスの段（companySegment）まで一致したときだけ同じ企業とみなす */
 const SHARED_HOSTS = [/(^|\.)i-web\.jpn\.com$/, /(^|\.)i-webs\.jp$/, /(^|\.)axol\.jp$/, /(^|\.)e2r\.jp$/, /(^|\.)snar\.jp$/, /(^|\.)mynavi\.jp$/, /(^|\.)rikunabi\.com$/, /(^|\.)hrmos\.co$/, /(^|\.)herp\.cloud$/, /(^|\.)talentio\.com$/, /(^|\.)n-ext\.jp$/];
 
 export const isSharedHost = (host: string) => SHARED_HOSTS.some((re) => re.test(host));
@@ -112,7 +112,15 @@ export function siteOf(host: string): string {
   return parts.slice(second ? -3 : -2).join('.');
 }
 
-const firstSegment = (u: URL) => u.pathname.split('/').filter(Boolean)[0]?.toLowerCase() ?? '';
+/**
+ * 共有の採用サイトで企業を表すパスの部分。先頭の短い段（axol の「/zw/s/」）や数字だけの段（年度）は全社共通なので、
+ * 最初の意味のある段まで含める（axol.jp/zw/s/itoen_28/entry → 「zw/s/itoen_28」）
+ */
+function companySegment(u: URL): string {
+  const seg = u.pathname.split('/').filter(Boolean).map((s) => s.toLowerCase());
+  const i = seg.findIndex((s) => s.length > 2 && !/^\d+$/.test(s));
+  return i < 0 ? '' : seg.slice(0, i + 1).join('/');
+}
 
 /** ページの URL に一番合う企業。マイページの URL が前方一致するものを優先する */
 export function matchCompany<T extends Pick<LinkCompany, 'url' | 'mypageUrl'>>(href: string, companies: T[]): T | undefined {
@@ -129,7 +137,7 @@ export function matchCompany<T extends Pick<LinkCompany, 'url' | 'mypageUrl'>>(h
       if (!u) continue;
       const shared = SHARED_HOSTS.some((re) => re.test(u.hostname));
       if (shared) {
-        if (u.hostname === page.hostname && firstSegment(u) && firstSegment(u) === firstSegment(page)) score = Math.max(score, weight + 1);
+        if (u.hostname === page.hostname && companySegment(u) && companySegment(u) === companySegment(page)) score = Math.max(score, weight + 1);
       } else if (u.hostname === page.hostname) {
         score = Math.max(score, weight + 1);
       } else if (siteOf(u.hostname) === siteOf(page.hostname)) {

@@ -89,6 +89,13 @@ textarea {
   color: inherit;
 }
 
+/* select の背景が透明だと、Windows の Chrome は選択肢の一覧を白い背景で出し、ダークモードの明るい文字が読めなくなる */
+option,
+optgroup {
+  background-color: var(--surface);
+  color: var(--text);
+}
+
 a {
   color: var(--link);
   text-decoration: none;
