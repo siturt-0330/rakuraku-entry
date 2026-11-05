@@ -8,49 +8,49 @@
     "hub": ""
   },
   "imobile": {
-    "pid": "",
+    "pid": "85678",
     "pc": {
-      "mid": "",
+      "mid": "598011",
       "slots": {
         "start": {
-          "asid": "",
+          "asid": "1951489",
           "size": "300x250"
         },
         "play": {
-          "asid": "",
+          "asid": "1951490",
           "size": "728x90"
         },
         "result": {
-          "asid": "",
+          "asid": "1951501",
           "size": "300x250"
         },
         "side": {
-          "asid": "",
+          "asid": "1951502",
           "size": "160x600"
         },
         "hub": {
-          "asid": "",
+          "asid": "1951503",
           "size": "300x250"
         }
       }
     },
     "sp": {
-      "mid": "",
+      "mid": "598012",
       "slots": {
         "start": {
-          "asid": "",
+          "asid": "1951504",
           "size": "300x250"
         },
         "playSp": {
-          "asid": "",
+          "asid": "1951505",
           "size": "320x50"
         },
         "result": {
-          "asid": "",
+          "asid": "1951506",
           "size": "300x250"
         },
         "hub": {
-          "asid": "",
+          "asid": "1951507",
           "size": "300x250"
         }
       }
