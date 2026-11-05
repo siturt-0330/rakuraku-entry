@@ -8,13 +8,15 @@
   --surface-2: #eff3f4;
   --text: #0f1419;
   --text-2: #536471;
-  --text-3: #8b98a5;
+  /* 補足の文字も、白・surface-1・surface-2 のどの背景でもコントラスト比 4.5 以上にする */
+  --text-3: #626e7a;
   --border: #eff3f4;
   --border-strong: #cfd9de;
   --primary: #0f1419;
   --primary-hover: #272c30;
   --on-primary: #ffffff;
-  --link: #1d9bf0;
+  /* 文字のリンクにも使うので、白・surface-1・surface-2 でコントラスト比 4.5 以上（白い文字を載せても 4.5 以上） */
+  --link: #1570c0;
   --ok: #00ba7c;
   --ok-bg: #e6f8f1;
   --ok-text: #00875a;
@@ -50,8 +52,10 @@
     --surface-1: #16181c;
     --surface-2: #202327;
     --text: #e7e9ea;
-    --text-2: #71767b;
-    --text-3: #5b6168;
+    /* 黒・surface-1・surface-2 のどの背景でもコントラスト比 4.5 以上（text-2 > text-3 の濃さの順は保つ） */
+    --text-2: #9aa1a8;
+    --text-3: #838a91;
+    --link: #1d9bf0;
     --border: #2f3336;
     --border-strong: #536471;
     --primary: #eff3f4;

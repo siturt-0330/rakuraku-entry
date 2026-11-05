@@ -208,7 +208,7 @@
 }
 
 .save-state.saved {
-  color: var(--ok);
+  color: var(--ok-text);
 }
 
 .btn-save {
@@ -670,7 +670,8 @@ input[role='switch']:checked::after {
   gap: 8px;
   padding: 12px 18px;
   border-radius: 8px;
-  background: var(--link);
+  /* ダークモードの --link（明るい青）だと白い文字が読めないので、どちらのモードでも濃い青 */
+  background: #1570c0;
   color: #fff;
   font-size: 14px;
   font-weight: 500;

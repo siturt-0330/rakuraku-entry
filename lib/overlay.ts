@@ -15,7 +15,7 @@ const CSS = `
   font: 600 11px/1 "Hiragino Mincho ProN", "Yu Mincho", "YuMincho", "Noto Serif JP", serif;
   border: 1.5px solid #c2412d; color: #c2412d; border-radius: 50%; transform: rotate(-12deg);
   animation: press .28s cubic-bezier(.2, 1.6, .4, 1) both; }
-.warn .stamp { width: auto; padding: 0 4px; border-radius: 3px; border-color: #b8862b; color: #9a6c17; font-size: 10px; }
+.warn .stamp { width: auto; padding: 0 4px; border-radius: 3px; border-color: #b8862b; color: #8a5f12; font-size: 10px; }
 @keyframes press { from { transform: rotate(-12deg) scale(1.8); opacity: 0; } }
 .bar { position: fixed; right: 20px; bottom: 20px; display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 18px;
   border-radius: 999px; background: #0f1419; color: #fff; pointer-events: auto;
