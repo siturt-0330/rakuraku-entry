@@ -102,7 +102,7 @@ const PATTERNS: Record<string, Case[]> = Object.fromEntries(
 );
 
 /** ふだんの実行に含める組。ほかの組はまだ直していない失敗を含むので、?set= で指定したときだけ動かす */
-const READY = ['hints', 'nested', 'postal'];
+const READY = ['hints', 'nested', 'postal', 'radios'];
 
 async function main() {
   const stage = document.getElementById('stage')!;

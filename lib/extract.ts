@@ -158,7 +158,11 @@ function collectControls(root: Document | ShadowRoot, out: Element[]) {
 function labelText(el: HTMLElement): string {
   const parts: string[] = [];
   const labels = (el as HTMLInputElement).labels;
-  if (labels) for (const l of Array.from(labels)) parts.push(textOf(l, 40));
+  // 1行分のラジオをまとめて包む label（「［○］大学 ［○］大学院（修士）…」）は、その選択肢の名前ではない
+  const radioName = el instanceof HTMLInputElement && el.type === 'radio' ? el.name : null;
+  const sharedByRadios = (l: HTMLLabelElement) =>
+    !!radioName && Array.from(l.querySelectorAll('input[type="radio"]')).some((r) => r !== el && (r as HTMLInputElement).name === radioName);
+  if (labels) for (const l of Array.from(labels)) if (!sharedByRadios(l)) parts.push(textOf(l, 40));
   const by = el.getAttribute('aria-labelledby');
   if (by) {
     for (const id of by.split(/\s+/)) parts.push(textOf(el.ownerDocument.getElementById(id), 40));
@@ -185,6 +189,18 @@ function siblingText(el: HTMLElement, dir: 1 | -1, max: number): string {
     target = parent;
   }
   return '';
+}
+
+/** 都道府県を地区ごとに分けた小見出し（「北海道・東北地区」「関東」「近畿地方」「九州・沖縄エリア」） */
+const REGION_HEADING = /^(北海道|東北|関東|甲信越|北陸|東海|中部|近畿|関西|中国|四国|九州|沖縄|[・･、\s])+(地区|地方|エリア|ブロック)?$/;
+
+/** 欄だけが入った表のマスの、すぐ右のマスの文字（「［○］｜大学｜［○］｜大学院（修士）」のようにラジオと選択肢の文字が別のマス） */
+function nextCellText(el: HTMLElement): string {
+  const cell = el.closest('td, th');
+  if (!cell || cell.querySelectorAll(VISIBLE_CONTROLS).length > 1 || textOf(cell, 20)) return '';
+  const next = cell.nextElementSibling;
+  if (!next || next.querySelector(VISIBLE_CONTROLS)) return '';
+  return textOf(next, 20);
 }
 
 /** 区切りのダッシュだけの文字（見た目が同じで文字が違うものをそろえて書く。NOT_A_HEADING と同じ並び） */
@@ -385,6 +401,8 @@ function sectionText(el: HTMLElement): string {
       // 先頭の「*」は必須の印（「*出身高校名を入力してください。」）なので外して見る
       const t = textOf(sib, 40).replace(/^[*＊]\s*/, '');
       if (own && t === own) continue;
+      // 都道府県のラジオを地区ごとに分けた小見出し（「関東地区」「近畿地方」）は区切りではない（上の「所在地を選択してください」を見る）
+      if (REGION_HEADING.test(t)) continue;
       // 「例（111-0000）」や「※〜」の注意書きは見出しではない
       if (!t || t.length > 40 || NOT_A_HEADING.test(t) || /^※/.test(t)) continue;
       return t;
@@ -465,7 +483,7 @@ export function scanFields(doc: Document): ScannedField[] {
     }
 
     if (el instanceof HTMLInputElement && el.type === 'radio') {
-      const optionLabel = labelText(el) || siblingText(el, 1, 20) || el.value;
+      const optionLabel = labelText(el) || siblingText(el, 1, 20) || nextCellText(el) || el.value;
       const group = radioGroupKey(el);
       const existing = group ? radioGroups.get(group) : undefined;
       if (existing) {

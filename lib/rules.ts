@@ -391,6 +391,8 @@ function classifyField(d: FieldDescriptor): Classification {
     case 'prefecture':
       if (has(/高校|高等学校/) && !has(/住所/)) return r('highSchoolPrefecture');
       if (has(/学校|大学|所在地/) && !has(/住所/)) return r('schoolPrefecture');
+      // 「所在地を選択してください」の区切りの下に、地区ごとに分けた都道府県のラジオが並ぶ学校検索
+      if (/学校|大学|所在地/.test(section) && !/住所/.test(`${section} ${near} ${ctx}`)) return r('schoolPrefecture');
       return r(kana ? 'prefectureKana' : kisei ? 'kiseiPrefecture' : 'prefecture');
     case 'city':
       // 「市区郡・地名・番地」のように番地までまとめて入れる欄
