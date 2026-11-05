@@ -105,7 +105,7 @@ const slugs = fs.readdirSync(gamesDir).filter((d) => fs.existsSync(path.join(gam
 const errors = [];
 const games = slugs.map((s) => load(s, errors));
 
-// 広告（Google AdSense）。games/ads.json の client が空なら、広告のタグも ads.txt も出さない
+// 広告（Google AdSense と i-mobile）。games/ads.json の client・imobile が空なら、広告のタグも ads.txt も出さない
 const ads = JSON.parse(fs.readFileSync(path.join(gamesDir, 'ads.json'), 'utf8'));
 const adClient = ads.client || '';
 if (adClient && !/^ca-pub-\d+$/.test(adClient)) errors.push(`[ads.json] client は「ca-pub-」で始まる AdSense のサイト運営者 ID にしてください（いまは「${adClient}」）`);
@@ -116,16 +116,55 @@ const adHead = adClient
   ? `<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adClient}" crossorigin="anonymous"></script>`
   : '';
 /**
- * 広告の枠。見えるようになってから読み込むので、class は adsbygoogle ではなく ad-unit にしておく（ゲームのページでは game.js、一覧では now で埋め込むスクリプトが読み込む）。
+ * AdSense の広告の枠。見えるようになってから読み込むので、class は adsbygoogle ではなく ad-unit にしておく（ゲームのページでは game.js、一覧では now で埋め込むスクリプトが読み込む）。
  * size をつけると大きさの決まった枠になる（大きさは game.css の .ad-small・.ad-side で決める）。small はプレイ中の小さい横長、side は結果画面のスコアの下の縦長
  */
-const adSlot = (name, { now = false, size = '' } = {}) => {
+const adsenseSlot = (name, { now = false, size = '' } = {}) => {
   const id = adClient && ads.slots?.[name];
   if (!id) return '';
   const load = now ? '<script>(window.adsbygoogle = window.adsbygoogle || []).push({});</script>' : '';
   const cls = now ? 'adsbygoogle' : 'ad-unit';
   const attrs = size ? 'style="display:inline-block"' : 'style="display:block" data-ad-format="auto" data-full-width-responsive="true"';
   return `<aside class="ad${size ? ' ad-' + size : ''}"><span class="ad-label">広告</span><ins class="${cls}" ${attrs} data-ad-client="${adClient}" data-ad-slot="${id}"></ins>${load}</aside>`;
+};
+
+/**
+ * i-mobile の広告スポット。ads.json の imobile.pc / imobile.sp に、PC 用・SP 用のメディア（mid）とスポット（asid と大きさ）を書く。
+ * 1 つの場所に PC 用と SP 用の枠を両方置き、画面の幅で片方だけ見せる（game.css の .im-pc・.im-sp）。
+ * 見えている枠だけ、ページに埋め込んだ imLoad() が読み込む（ゲームのページでは game.js が画面を出すたびに呼ぶ）
+ */
+const im = ads.imobile || {};
+const imSpot = (device, name) => {
+  const spot = im[device]?.slots?.[name];
+  return im.pid && im[device]?.mid && spot?.asid ? spot : null;
+};
+const imUnit = (device, name) => {
+  const spot = imSpot(device, name);
+  if (!spot) return '';
+  const [w, h] = spot.size.split('x');
+  return `<div class="im-unit im-${device}" style="width:${w}px;height:${h}px" data-mid="${im[device].mid}" data-asid="${spot.asid}"></div>`;
+};
+if (im.pid && !/^\d+$/.test(im.pid)) errors.push(`[ads.json] imobile.pid はパートナー ID（数字だけ）にしてください（いまは「${im.pid}」）`);
+for (const device of ['pc', 'sp']) {
+  if (im[device]?.mid && !/^\d+$/.test(im[device].mid)) errors.push(`[ads.json] imobile.${device}.mid はメディア ID（数字だけ）にしてください（いまは「${im[device].mid}」）`);
+  for (const [name, spot] of Object.entries(im[device]?.slots || {})) {
+    if (!spot.asid) continue;
+    if (!/^\d+$/.test(spot.asid)) errors.push(`[ads.json] imobile.${device}.slots.${name}.asid はスポット ID（数字だけ）にしてください（いまは「${spot.asid}」）`);
+    if (!/^\d+x\d+$/.test(spot.size || '')) errors.push(`[ads.json] imobile.${device}.slots.${name}.size は「300x250」の形にしてください（いまは「${spot.size || ''}」）`);
+  }
+}
+const imOn = ['pc', 'sp'].some((d) => Object.keys(im[d]?.slots || {}).some((name) => imSpot(d, name)));
+/** i-mobile の読み込み。見えている枠だけ、id を付けて 1 回ずつ読み込む（隠れた画面の枠は幅が 0 なので、その画面を出したときに読み込む） */
+const imHead = imOn
+  ? `<script>window.imLoad=function(){document.querySelectorAll('.im-unit').forEach(function(el,i){if(el.dataset.done||!el.offsetWidth)return;el.dataset.done='1';el.id='im-'+el.dataset.asid+'-'+i;if(!window.imScript){window.imScript=1;var s=document.createElement('script');s.async=true;s.src='https://imp-adedge.i-mobile.co.jp/script/v1/spot.js?20220104';document.head.appendChild(s);}(window.adsbyimobile=window.adsbyimobile||[]).push({pid:${im.pid},mid:+el.dataset.mid,asid:+el.dataset.asid,type:'banner',display:'inline',elementid:el.id});});};</script>`
+  : '';
+
+/** 広告の枠。i-mobile のスポットがあればそれを、なければ AdSense の枠を出す */
+const adSlot = (name, { now = false, size = '' } = {}) => {
+  const units = imUnit('pc', name) + imUnit('sp', name);
+  if (!units) return adsenseSlot(name, { now, size });
+  const load = now ? '<script>imLoad();addEventListener("resize",imLoad);</script>' : '';
+  return `<aside class="ad ad-im${size ? ' ad-' + size : ''}"><span class="ad-label">広告</span>${units}${load}</aside>`;
 };
 
 if (errors.length) {
@@ -241,10 +280,11 @@ for (const g of games) {
     .replaceAll('{{aboutText}}', () => esc(g.cfg.aboutText || g.cfg.description))
     .replaceAll('{{listPath}}', () => listPath)
     .replaceAll('{{version}}', () => version)
-    .replaceAll('{{adHead}}', () => adHead)
+    .replaceAll('{{adHead}}', () => adHead + imHead)
     .replaceAll('{{wordCount}}', () => String(g.words.length))
     .replaceAll('{{adStart}}', () => adSlot('start'))
     .replaceAll('{{adPlay}}', () => adSlot('play', { size: 'small' }))
+    .replaceAll('{{adPlaySp}}', () => adSlot('playSp'))
     .replaceAll('{{adSide}}', () => adSlot('side', { size: 'side' }))
     .replaceAll('{{adResult}}', () => adSlot('result'))
     .replaceAll('{{jsonLd}}', () => ld(gameLd))
@@ -377,7 +417,7 @@ write(
   template('hub.html')
     .replaceAll('{{version}}', () => hubVersion)
     .replace('{{ogImage}}', () => ogImage('og.png'))
-    .replace('{{adHead}}', () => adHead)
+    .replace('{{adHead}}', () => adHead + imHead)
     .replace('{{adHub}}', () => adSlot('hub', { now: true }))
     .replace('{{jsonLd}}', () => ld(hubLd))
     .replace('{{games}}', () => cards)
@@ -386,11 +426,16 @@ write(
 );
 console.log('/game  ゲーム一覧');
 
-// ads.txt（AdSense が「このサイトの広告枠を売ってよい会社」を確かめるファイル。サイトの確認にも使える）
+// ads.txt（広告の会社が「このサイトの広告枠を売ってよい会社」を確かめるファイル。AdSense はサイトの確認にも使う）。
+// i-mobile の行は、管理画面に出る行を ads.json の imobile.adsTxt にそのまま書く
 const adsTxt = path.join(root, 'site', 'ads.txt');
-if (adClient) {
-  fs.writeFileSync(adsTxt, `google.com, ${adClient.replace(/^ca-/, '')}, DIRECT, f08c47fec0942fa0\n`);
-  console.log(`広告：${adClient}（枠：${Object.keys(ads.slots || {}).filter((k) => ads.slots[k]).join('・') || 'なし'}）・ads.txt を書き出しました`);
+const adsLines = [...(adClient ? [`google.com, ${adClient.replace(/^ca-/, '')}, DIRECT, f08c47fec0942fa0`] : []), ...(imOn ? im.adsTxt || [] : [])];
+if (adsLines.length) {
+  fs.writeFileSync(adsTxt, adsLines.join('\n') + '\n');
+  const imSlots = ['pc', 'sp'].flatMap((d) => Object.keys(im[d]?.slots || {}).filter((name) => imSpot(d, name)).map((name) => `${d}.${name}`));
+  console.log(
+    `広告：AdSense ${adClient || 'なし'}（枠：${Object.keys(ads.slots || {}).filter((k) => ads.slots[k]).join('・') || 'なし'}）・i-mobile ${imOn ? im.pid : 'なし'}（枠：${imSlots.join('・') || 'なし'}）・ads.txt を書き出しました`,
+  );
 } else if (fs.existsSync(adsTxt)) {
   fs.rmSync(adsTxt);
   console.log('広告：なし（ads.txt を消しました）');

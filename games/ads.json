@@ -6,5 +6,55 @@
     "result": "",
     "side": "",
     "hub": ""
+  },
+  "imobile": {
+    "pid": "",
+    "pc": {
+      "mid": "",
+      "slots": {
+        "start": {
+          "asid": "",
+          "size": "300x250"
+        },
+        "play": {
+          "asid": "",
+          "size": "728x90"
+        },
+        "result": {
+          "asid": "",
+          "size": "300x250"
+        },
+        "side": {
+          "asid": "",
+          "size": "160x600"
+        },
+        "hub": {
+          "asid": "",
+          "size": "300x250"
+        }
+      }
+    },
+    "sp": {
+      "mid": "",
+      "slots": {
+        "start": {
+          "asid": "",
+          "size": "300x250"
+        },
+        "playSp": {
+          "asid": "",
+          "size": "320x50"
+        },
+        "result": {
+          "asid": "",
+          "size": "300x250"
+        },
+        "hub": {
+          "asid": "",
+          "size": "300x250"
+        }
+      }
+    },
+    "adsTxt": []
   }
 }

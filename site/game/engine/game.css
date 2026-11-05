@@ -204,6 +204,16 @@ footer { text-align: center; font-size: 12px; color: var(--mute); padding: 20px;
 .ad-side { margin-top: 16px; }
 .ad-side ins { width: 280px; height: 560px; }
 .ad-label { display: block; font-size: 11px; color: var(--mute); margin-bottom: 6px; }
+/* i-mobile：1 つの場所に PC 用と SP 用の枠があり、画面の幅で片方だけ見せる（大きさは枠の style）。結果画面の縦長は PC だけ */
+.im-unit { display: inline-block; }
+.ad-im .im-sp { display: none; }
+.ad-im:not(:has(.im-pc)) { display: none; }
+@media (max-width: 820px) {
+  .ad-im .im-pc { display: none; }
+  .ad-im .im-sp { display: inline-block; }
+  .ad-im:not(:has(.im-pc)) { display: block; }
+  .ad-im:not(:has(.im-sp)) { display: none; }
+}
 .ad:has(ins[data-ad-status="unfilled"]) { display: none; }
 
 /* 単語帳 */

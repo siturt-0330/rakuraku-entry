@@ -98,6 +98,8 @@
       el.className = 'adsbygoogle';
       try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch (e) { /* 広告が出なくても遊べる */ }
     });
+    // i-mobile の枠（ページの head に埋め込んだ imLoad が、見えている枠だけ読み込む）
+    try { if (window.imLoad) window.imLoad(); } catch (e) { /* 広告が出なくても遊べる */ }
   }
 
   // ---- 単語帳（出題しない言葉を選ぶ） ----
