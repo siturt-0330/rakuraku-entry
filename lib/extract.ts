@@ -205,6 +205,26 @@ function siblingText(el: HTMLElement, dir: 1 | -1, max: number): string {
   return '';
 }
 
+/**
+ * 欄を包む箱のすぐ上にある、欄を含まない要素の文（アンケートの設問の帯）。長い文も読む（200 字まで）。
+ * 「上記質問で『大学院』を選択された方のみ〜（大学院生以外の方は『なし』とご記載ください）」（snar.jp のアンケート）
+ */
+export function questionAbove(el: HTMLElement): string {
+  // 欄のマスの左の小見出し（「卒業大学（院生のみ）」）で止めず、ほかの欄を含む要素にぶつかるまで上へ集める
+  const parts: string[] = [];
+  let node: Element | null = el;
+  for (let depth = 0; node && depth < 6; depth++, node = node.parentElement) {
+    if (/^(FORM|BODY)$/.test(node.tagName)) break;
+    const prev = node.previousElementSibling;
+    if (!prev) continue;
+    // 表の 1 つ前の行は別の項目（「※学位の選択は、大学院の方のみ対象です」の行の次の「頭文字」の行）
+    if (prev.tagName === 'TR' || prev.querySelector(VISIBLE_CONTROLS) || isControl(prev)) break;
+    const t = textOf(prev, 200);
+    if (t) parts.unshift(t);
+  }
+  return parts.join(' ');
+}
+
 /** 都道府県を地区ごとに分けた小見出し（「北海道・東北地区」「関東」「近畿地方」「九州・沖縄エリア」） */
 const REGION_HEADING = /^(北海道|東北|関東|甲信越|北陸|東海|中部|近畿|関西|中国|四国|九州|沖縄|[・･、\s])+(地区|地方|エリア|ブロック)?$/;
 

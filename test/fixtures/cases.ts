@@ -2125,6 +2125,34 @@ export const CASES: Case[] = [
       expect: { '[name=zip1]': '150', '[name=zip2]': '0041', '[name=addr1]': '渋谷区神南1-2-3', '#cbx_kflg': true, '[name=kzip1]': '', '[name=kzip2]': '', '[name=kken]': '', '[name=kaddr1]': '', '[name=kaddr2]': '' },
     } satisfies Case;
   })(),
+  ...(() => {
+    // snar.jp のマイページのアンケート（survey.aspx、TOK）：設問の帯の下に「卒業大学（院生のみ）」の小見出しと欄。
+    // 条件に合わない人は「なし」と書くよう指示がある必須の欄
+    const q = (no: number, question: string, body: string) =>
+      `<div class="survey"><div class="q">${question}<span class="req">*</span></div><div class="a">${body}</div></div>`;
+    const text = (name: string, sub: string) => `<table><tr><td>${sub}</td><td><span class="count">現在の文字数：0/30字</span><input type="text" name="${name}" maxlength="30"></td></tr></table>`;
+    const kinds = ['大学院（修士）', '大学院（博士）', '大学', '短大', '専門学校', '高専'];
+    const html = (n: string) => `<form>
+      ${q(1, '学校区分を教えてください。', kinds.map((k, i) => `<label><input type="radio" name="${n}kbn" value="${i + 1}">${k}</label><br>`).join(''))}
+      ${q(2, '上記質問で「大学院」を選択された方のみ、卒業大学を教えてください。（大学院生以外の方は「なし」とご記載ください）', text(`${n}univ`, '卒業大学（院生のみ）'))}
+      ${q(3, '理系学生のみ、在籍している研究室名を教えてください。（文系もしくは研究室未定の場合は「なし」とご記載ください）', text(`${n}lab`, '研究室名（理系のみ）'))}
+      ${q(4, '理系学生のみ、在籍している研究室の教授名を教えてください。（文系もしくは研究室未定の場合は「なし」とご記載ください）', text(`${n}prof`, '研究室教授名（理系のみ）'))}
+    </form>`;
+    return [
+      {
+        name: 'snar.jp（TOK）のアンケート：学部・文系の人は、院生のみ・理系のみの必須の欄に「なし」と書く',
+        html: html('a'),
+        profile: { bunri: '文系', lab: 'サンプルゼミ' },
+        expect: { '[name=akbn][value="3"]': true, '[name=auniv]': 'なし', '[name=alab]': 'なし', '[name=aprof]': 'なし' },
+      },
+      {
+        name: 'snar.jp（TOK）のアンケート：理系の学部生は、研究室名を入れ、院生のみの欄は「なし」',
+        html: html('b'),
+        profile: { bunri: '理系', lab: 'サンプル研究室' },
+        expect: { '[name=bkbn][value="3"]': true, '[name=buniv]': 'なし', '[name=blab]': 'サンプル研究室' },
+      },
+    ] as Case[];
+  })(),
   // ---- 第9弾：i-webs（東レ）の学歴の欄 ----
   {
     name: 'i-webs（東レ）：最終学歴となる大学（院）の入学年月に入れ、博士の方だけの修士課程の欄には入れない',

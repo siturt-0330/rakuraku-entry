@@ -1,5 +1,5 @@
 import { applyCombo, comboStill, comboText, restoreCombo } from './combo';
-import { describeForm, scanFields, type ScannedField } from './extract';
+import { describeForm, questionAbove, scanFields, type ScannedField } from './extract';
 import { FIELD_KEYS, isFieldKey, type FieldKey } from './fieldKeys';
 import { applyValue, hasUserValue, markTarget, restoreSnapshot, takeSnapshot, type Snapshot } from './fill';
 import { Overlay, type BarLink } from './overlay';
@@ -142,6 +142,9 @@ function stillSelected(r: Result): boolean {
   return el.selectedIndex >= 0 && el.options[el.selectedIndex]?.text.trim() === r.value;
 }
 
+/** 「（大学院生以外の方は「なし」とご記載ください）」「該当しない場合は『なし』と入力」 */
+const SAYS_WRITE_NONE = /[「『"”]?(なし|無し|ナシ)[」』"”]?と(ご)?(記載|記入|入力|書い|お書き)/;
+
 /** 「※大学院に所属している方のみ」のような条件付きの欄と、その条件をプロフィールが満たすか */
 const isGrad = (p: Profile) => p.schoolType.startsWith('大学院');
 const CONDITIONS: [RegExp, (p: Profile) => boolean][] = [
@@ -162,8 +165,9 @@ const CONDITIONS: [RegExp, (p: Profile) => boolean][] = [
   // 「その他学校情報」「ダブルスクール」は、プロフィールにない別の学校
   [/その他.{0,2}学校情報|ダブルスクール/, () => false],
   // 「文理区分で理系を選択された方は、下記A〜Eまでの設問にお答えください」（区切りの見出し）
-  [/理系.{0,4}選(択さ?れ?た|んだ|ばれた)(方|場合)|理系の(方|者)のみ/, (p) => p.bunri === '理系'],
-  [/文系.{0,4}選(択さ?れ?た|んだ|ばれた)(方|場合)|文系の(方|者)のみ/, (p) => p.bunri === '文系'],
+  // 「理系学生のみ」「（理系のみ）」「理系の方だけ」（snar.jp TOK のアンケート）も
+  [/理系.{0,4}選(択さ?れ?た|んだ|ばれた)(方|場合)|理系(の)?(方|者|人|学生|生)?(のみ|だけ|に限り)/, (p) => p.bunri === '理系'],
+  [/文系.{0,4}選(択さ?れ?た|んだ|ばれた)(方|場合)|文系(の)?(方|者|人|学生|生)?(のみ|だけ|に限り)/, (p) => p.bunri === '文系'],
   // 編入した学校はプロフィールにないので、「大学編入歴のある方のみ」の欄には入れない
   [/編入.{0,12}(の方|方|者)のみ|編入(歴|経験)のある/, () => false],
   // 進学予定の大学院はプロフィールにない（「大学院進学予定［あり／なし］」「進学予定の大学院名」）
@@ -198,7 +202,9 @@ function applyConditions(fields: ScannedField[], classes: Classification[], prof
     const d = f.desc;
     // 条件の注意書きは、欄と同じセルの中（欄の上の説明文）にあることも多い
     const cell = f.elements[0]!.closest('td, dd')?.textContent?.slice(0, 200) ?? '';
-    const text = norm(`${d.label} ${d.prefix} ${d.context} ${d.section} ${d.sectionNote ?? ''} ${cell}`);
+    // アンケートの設問の帯（欄の箱のすぐ上の長い文）にも条件や「なし」の指示が書かれる
+    const question = questionAbove(f.elements[0]!);
+    const text = norm(`${d.label} ${d.prefix} ${d.context} ${d.section} ${d.sectionNote ?? ''} ${cell} ${question}`);
     const own = norm(`${d.label} ${d.prefix} ${d.context} ${cell}`);
     const scope = norm(`${d.section} ${d.sectionNote ?? ''}`);
     const previousSchool =
@@ -206,11 +212,15 @@ function applyConditions(fields: ScannedField[], classes: Classification[], prof
       ((PREVIOUS_SCHOOL.test(`${own} ${scope}`) && (isGrad(profile) || MENTIONS_GRAD.test(`${own} ${scope}`))) ||
         (UNDERGRAD_ROW.test(norm(d.context)) && isGrad(profile)));
     const gradLabel = GRAD_LABEL.test(norm(d.context)) || GRAD_LABEL.test(norm(d.label));
+    // 「大学院生以外の方は『なし』とご記載ください」のように、当てはまらない人の書き方が決まっている文字の欄
+    const writeNone = /^(text|textarea)$/.test(d.kind) && SAYS_WRITE_NONE.test(text) ? 'なし' : undefined;
     if (previousSchool || (gradLabel && !isGrad(profile)) || CONDITIONS.some(([re, ok]) => re.test(text) && !ok(profile))) {
-      classes[i] = { key: null, confidence: 0, source: c.source };
+      classes[i] = writeNone ? { ...c, literal: writeNone } : { key: null, confidence: 0, source: c.source };
       owner = { kind: 'skip', index: i };
       return;
     }
+    // 条件に合っていても、プロフィールが空（研究室が未定など）なら「なし」
+    if (writeNone) classes[i] = { ...c, ifEmpty: writeNone };
     if (c.key === 'highSchool') owner = { kind: 'high', index: i };
     else if (/^(school|schoolKana|faculty|department|lab)$/.test(c.key)) owner = { kind: 'current', index: i };
     else if (/^graduation(Year|Month)?$/.test(c.key) && i - owner.index <= OWNER_DISTANCE) {
@@ -290,7 +300,8 @@ export class FormFiller {
     const result: Result = { field, key, confidence, source, status: 'skip', value: '', variants: [], noData: false };
     if (!key || confidence < MIN_CONFIDENCE || hasUserValue(field)) return result;
 
-    result.variants = valueVariants(key, profile, computeHints(field.desc), field.desc.kind, field.desc.options);
+    result.variants = c.literal ? [c.literal] : valueVariants(key, profile, computeHints(field.desc), field.desc.kind, field.desc.options);
+    if (!result.variants.length && c.ifEmpty) result.variants = [c.ifEmpty];
     if (!result.variants.length) {
       result.status = 'empty';
       result.noData = true;

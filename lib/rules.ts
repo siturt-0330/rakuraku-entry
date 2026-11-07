@@ -8,6 +8,12 @@ export interface Classification {
   key: FieldKey | null;
   confidence: number;
   source: 'rule' | 'ai';
+  /**
+   * 「（大学院生以外の方は『なし』とご記載ください）」の欄に入れる「なし」。
+   * literal は条件に合わない人に必ず入れる値、ifEmpty はプロフィールの値が空のときに入れる値（engine の applyConditions が付ける）
+   */
+  literal?: string;
+  ifEmpty?: string;
 }
 
 type Category =
