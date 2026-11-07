@@ -9,10 +9,24 @@ export function isSameAsCurrent(text: string): boolean {
   const t = text.replace(/\s+/g, '');
   if (/同意|メール|マガジン|配信|海外|国外/.test(t)) return false;
   // 「帰省先住所がある場合は入力して下さい。ない場合はチェックして下さい。」（snar.jp）。現住所と同じなら別の帰省先はない
-  if (/(帰省|休暇).{0,40}ない場合.{0,10}チェック/.test(t)) return true;
-  // 「現住所と同じ」「現在の連絡先と同じ」「上記と同一」「同上」など。
+  if (/(帰省|帰郷|休暇|実家).{0,40}ない場合.{0,10}チェック/.test(t)) return true;
+  // 「現住所と同じ」「現在の連絡先と同じ」「上記と同一」「同上」「現住所と同様」（snar.jp イビデン）「現住所と一緒」「変更なし」など。
   // 住所・連絡先の話であることを必須にし、同意・メール配信・海外在住などのチェックボックスは含まない
-  return /同じ|同一|同上/.test(t) && /住所|連絡先|帰省|休暇/.test(t);
+  return SAME_WORDS.test(t) && /住所|連絡先|帰省|帰郷|休暇|実家/.test(t);
+}
+
+/** 「同じ」の言い回し（現住所と同じ・同一・同上・同様・一緒・変わらない・変更なし） */
+export const SAME_WORDS = /同じ|同一|同上|同様|一緒|変わらない|変更(なし|無し|はない|ありません)/;
+
+/** 帰省先・休暇中の連絡先の言い回し（帰省先・帰郷先・休暇中・休暇期間中・長期休暇時・実家） */
+export const KISEI_WORDS = /帰省|帰郷|休暇|実家|kisei/;
+
+/** 「現住所と同じ／現住所と異なる」「同様／別の住所」のように、同じ側と違う側の対になった選択肢。なければ null */
+export function sameDiffOptions(options: string[]): { same: string; diff: string } | null {
+  const norm = (o: string) => o.normalize('NFKC').replace(/\s/g, '');
+  const diff = options.find((o) => /異なる|違う|別/.test(norm(o)));
+  const same = options.find((o) => o !== diff && SAME_WORDS.test(norm(o)));
+  return same && diff ? { same, diff } : null;
 }
 
 /** AI・ルール判定に使う欄の特徴。ユーザーが入力済みの値は含めない */
@@ -240,6 +254,19 @@ function adjacentText(el: HTMLElement, dir: 1 | -1, max: number): string {
   return dir === 1 ? out.slice(0, max) : out.slice(-max);
 }
 
+/**
+ * 欄の行のすぐ上の、欄のない 1 マスだけの行の文字（縦積みの表の見出しの行）。
+ * 欄の行がそれより多いマスに分かれている表（「年｜月｜学歴」の見出しの行）は列見出しなので使わない
+ */
+function aboveRowHeader(row: HTMLTableRowElement | null, cellCount: number): string {
+  const prev = row?.previousElementSibling;
+  if (!prev || prev.tagName !== 'TR' || prev.querySelector(VISIBLE_CONTROLS)) return '';
+  const prevCells = Array.from(prev.children).filter((c) => /^T[HD]$/.test(c.tagName));
+  if (prevCells.length !== 1 || cellCount > 1) return '';
+  const t = textOf(prevCells[0]!, 60);
+  return t && !NOT_A_HEADING.test(t) ? t : '';
+}
+
 /** 表の列見出し（ヘッダー行の同じ位置のセル） */
 function columnHeader(cell: HTMLTableCellElement): string {
   const table = cell.closest('table');
@@ -274,6 +301,10 @@ function structuralHeader(el: HTMLElement): string {
         const column = controlCells > 1 ? columnHeader(cell) : '';
         return column && column !== t ? `${t}／${column}` : t;
       }
+      // 見出しの行と欄の行が交互に並ぶ縦積みの表（「現住所郵便番号」の行の下に欄の行）は、1つ上の見出しだけの行を使う。
+      // 表のいちばん上の見出しの行を列見出しにすると、すべての欄が「郵便番号」になってしまう（e2r）
+      const above = aboveRowHeader(row, cells.length);
+      if (above) return above;
       // 行見出しがない表（「年｜月｜学歴・職歴」のような表）は、列の見出しを使う
       const column = columnHeader(cell);
       if (column) return column;

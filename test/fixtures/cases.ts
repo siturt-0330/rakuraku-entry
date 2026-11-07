@@ -2108,6 +2108,23 @@ export const CASES: Case[] = [
       </div></div></form>`,
     expect: { '[name=yubing_h]': '150', '[name=yubing_l]': '0041', '[name=keng]': '2', '[name=jushog1]': '渋谷区', '[name=jushog2]': '神南1-2-3' },
   },
+  (() => {
+    // snar.jp（イビデン）：帰省先の見出しがなく、「現住所と同様の場合はチェックして下さい」のチェックの下に、現住所と同じ並びの欄がもう一度ある
+    const row = (label: string, body: string) => `<tr><td class="td01">${label}</td><td>${body}</td></tr>`;
+    const ken = (name: string) => `<select name="${name}"><option value=""></option><option value="1">北海道</option><option value="13">東京都</option></select>`;
+    const block = (p: string) =>
+      row('郵便番号', `<input name="${p}zip1" type="text" maxlength="3"> - <input name="${p}zip2" type="text" maxlength="4"> <a href="#">住所検索</a>`) +
+      row('都道府県', ken(`${p}ken`)) +
+      row('市区郡番地', `<input name="${p}addr1" type="text"><p>例）千代田区千代田1-2-3</p>`) +
+      row('マンション・アパート名', `<input name="${p}addr2" type="text"><p>例）日本アパート201号</p>`);
+    return {
+      name: 'snar.jp（イビデン）：「現住所と同様の場合はチェックして下さい」にチェックし、下の住所の欄には入れない',
+      html: `<form><table class="entryTb"><tbody>${block('')}
+        <tr><td colspan="2">現住所と異なる場合は入力して下さい。現住所と同様の場合はチェックして下さい。<input id="cbx_kflg" type="checkbox" name="cbx_kflg"><label for="cbx_kflg">チェックしてください。</label></td></tr>
+        ${block('k')}</tbody></table></form>`,
+      expect: { '[name=zip1]': '150', '[name=zip2]': '0041', '[name=addr1]': '渋谷区神南1-2-3', '#cbx_kflg': true, '[name=kzip1]': '', '[name=kzip2]': '', '[name=kken]': '', '[name=kaddr1]': '', '[name=kaddr2]': '' },
+    } satisfies Case;
+  })(),
   // ---- 第9弾：i-webs（東レ）の学歴の欄 ----
   {
     name: 'i-webs（東レ）：最終学歴となる大学（院）の入学年月に入れ、博士の方だけの修士課程の欄には入れない',

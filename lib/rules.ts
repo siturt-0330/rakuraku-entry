@@ -1,4 +1,4 @@
-import { isSameAsCurrent, type FieldDescriptor, type ScannedField } from './extract';
+import { isSameAsCurrent, KISEI_WORDS, sameDiffOptions, type FieldDescriptor, type ScannedField } from './extract';
 import type { FieldKey } from './fieldKeys';
 import type { Hints } from './types';
 import { hasFullDigit, hasHalfKana, hasHiragana, norm } from './japanese';
@@ -179,7 +179,8 @@ const PERSONAL_CATEGORIES = new Set<string>(['name', 'roman', 'phone', 'email', 
 const KANA_TEXT = /フリガナ|ふりがな|よみがな|ひらがな|平仮名|カナ|かな|kana|furigana/g;
 const KANA_ATTR = /kana|furi|yomi/;
 const KANA_WORD = /フリガナ|ふりがな|よみがな|ひらがな|平仮名|カナ|かな|kana|furigana|^セイ(?![ァ-ヶ])|^メイ(?![ァ-ヶ])/;
-const KISEI = /帰省|休暇中|実家|kisei/;
+/** 帰省先の言い回し（extract.ts の KISEI_WORDS。「休暇期間中」「長期休暇時」「帰郷先」も帰省先） */
+const KISEI = KISEI_WORDS;
 const EMERGENCY = /緊急|emergency|kinkyu/;
 const PHOTO = /写真|photo|画像|顔/;
 
@@ -237,6 +238,10 @@ function classifyField(d: FieldDescriptor): Classification {
   }
   // 「帰省先は現住所と同じですか ［はい］［いいえ］」もチェックボックスと同じ扱い
   if (isYesNo(d) && isSameAsCurrent(`${near} ${ctx}`)) return result('kiseiSameCheck', CONF.near);
+  // 「現住所と同じ／現住所と異なる」のラジオ・プルダウン（帰省先・休暇中の連絡先の区切りの中か、選択肢そのものに「住所」とある）
+  if ((d.kind === 'radio' || d.kind === 'select') && sameDiffOptions(d.options) && /住所|連絡先|帰省|帰郷|休暇|実家/.test(`${near} ${ctx} ${section} ${d.options.join(' ')}`)) {
+    return result('kiseiSameCheck', CONF.near);
+  }
 
   if (d.kind === 'file') {
     // 履歴書 PDF などのアップロード欄には入れない
@@ -282,7 +287,7 @@ function classifyField(d: FieldDescriptor): Classification {
 
   const scopeText = `${near} ${ctx} ${section} ${attrs}`;
   // 「帰省先住所（現住所と異なる場合のみ記入）」は帰省先なので、「現住所と異なる」のような言い回しは除いて見る
-  const kisei = KISEI.test(scopeText) && !/現住所/.test(`${near} ${ctx}`.replace(/現住所と(異なる|違う|同じ|同一)/g, ''));
+  const kisei = KISEI.test(scopeText) && !/現住所/.test(`${near} ${ctx}`.replace(/現住所(と|に)(異なる|違う|同じ|同一|同様|一緒|別)/g, ''));
   const emergency = EMERGENCY.test(scopeText);
   const byPosition = Math.min(conf, CONF.position);
   const r = (key: FieldKey, c = conf) => result(key, c);

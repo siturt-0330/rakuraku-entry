@@ -1,4 +1,4 @@
-import type { FieldKind } from './extract';
+import { sameDiffOptions, type FieldKind } from './extract';
 import type { FieldKey } from './fieldKeys';
 import type { Hints, Profile } from './types';
 import { toFullWidth, toHalfKana, toHalfWidthAscii, toHiragana, toKatakana, toWareki } from './japanese';
@@ -602,6 +602,9 @@ export function valueVariants(key: FieldKey, p: Profile, h: Hints, kind: FieldKi
   const yesNo = kind === 'radio' || kind === 'select' ? yesNoOptions(options) : null;
   // 「帰省先は現住所と同じですか」は、同じなら「はい」、違うなら「いいえ」
   if (yesNo && key === 'kiseiSameCheck') return kiseiIsSame(p) ? [yesNo.yes, ...YES_WORDS] : [yesNo.no, ...NO_WORDS];
+  // 「現住所と同じ／現住所と異なる」「同様／別の住所」の選択肢は、同じなら「同じ」の側
+  const sameDiff = key === 'kiseiSameCheck' && (kind === 'radio' || kind === 'select') ? sameDiffOptions(options) : null;
+  if (sameDiff) return [kiseiIsSame(p) ? sameDiff.same : sameDiff.diff];
   if (yesNo && values.length && !YES_WORDS.includes(values[0]!)) {
     return SAYS_NONE.test(values[0]!.normalize('NFKC')) ? [yesNo.no, ...NO_WORDS] : [yesNo.yes, ...YES_WORDS];
   }
