@@ -16,6 +16,8 @@ interface CaseResult {
   failures: Failure[];
   undoFailures: string[];
   error?: string;
+  /** 実行した組の中での通し番号（分けて流したあと、元の順番に戻すため） */
+  index?: number;
 }
 
 function resolve(root: HTMLElement, selector: string): Element | null {
@@ -102,7 +104,7 @@ const PATTERNS: Record<string, Case[]> = Object.fromEntries(
 );
 
 /** ふだんの実行に含める組。ほかの組はまだ直していない失敗を含むので、?set= で指定したときだけ動かす */
-const READY = ['hints', 'nested', 'postal', 'radios'];
+const READY = ['hints', 'nested', 'postal', 'radios', 'e2r', 'same'];
 
 async function main() {
   const stage = document.getElementById('stage')!;
@@ -114,7 +116,11 @@ async function main() {
   const set = params.get('set');
   // 何も渡さなければ、直し終わった組（READY）だけ。?set=all ですべて
   const cases = set === 'all' ? [...CASES, ...Object.values(PATTERNS).flat()] : set ? (PATTERNS[set] ?? []) : [...CASES, ...READY.flatMap((k) => PATTERNS[k] ?? [])];
-  for (const c of cases) if (!only || c.name.includes(only)) results.push(await runCase(c, stage));
+  // ?shard=2&of=8 のように渡すと、8 つに分けたうちの 3 つ目（通し番号 % 8 === 2）だけ実行する（parallel.html が使う）
+  const of = Number(params.get('of')) || 1;
+  const shard = Number(params.get('shard')) || 0;
+  const picked = cases.map((c, index) => ({ c, index })).filter(({ c }) => !only || c.name.includes(only));
+  for (const { c, index } of picked) if (index % of === shard) results.push({ ...(await runCase(c, stage)), index });
 
   const failed = results.filter((r) => r.failures.length || r.undoFailures.length || r.error);
   const esc = (s: unknown) => String(s).replace(/[&<>]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[ch]!);
@@ -129,6 +135,8 @@ async function main() {
       )
       .join('')}</ol>`;
   (window as unknown as { suiteResults: CaseResult[] }).suiteResults = results;
+  // parallel.html の iframe の中で動いているときは、結果を親に渡す
+  if (window.parent !== window) window.parent.postMessage({ type: 'suite-results', shard, results }, location.origin);
 }
 
 main();

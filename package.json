@@ -16,7 +16,8 @@
     "harness": "vite --config test/vite.config.ts",
     "build:release": "wxt build",
     "zip:release": "wxt zip",
-    "build:column": "tsc -p column-app && vite build --config column-app/vite.config.ts"
+    "build:column": "tsc -p column-app && vite build --config column-app/vite.config.ts",
+    "test:forms": "node test/run.mjs"
   },
   "dependencies": {
     "@fontsource-variable/noto-sans-jp": "^5.3.1",

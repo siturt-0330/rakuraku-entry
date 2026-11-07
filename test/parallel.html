@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <title>RecruitAI 回帰テスト（並べて実行）</title>
+    <style>
+      body { font: 13px/1.6 system-ui, 'Yu Gothic UI', sans-serif; margin: 16px; }
+      .ok { color: #0a7d4f; }
+      .ng { color: #c41320; }
+      .d { color: #222; margin-left: 12px; font-size: 12px; }
+      pre.d { white-space: pre-wrap; }
+      /* テストを流す枠。見えていないと欄の幅が 0 になり、見えている欄だけを入れるエンジンが動かないので、画面の外に置く */
+      #frames { position: absolute; left: -10000px; top: 0; }
+      #frames iframe { width: 960px; height: 900px; border: 0; }
+    </style>
+  </head>
+  <body>
+    <div id="results">実行中…</div>
+    <div id="frames"></div>
+    <script type="module" src="./parallel.ts"></script>
+  </body>
+</html>
