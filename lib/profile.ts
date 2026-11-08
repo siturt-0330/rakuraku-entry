@@ -90,8 +90,10 @@ export function emptyProfile(label = '新しいプロフィール'): Profile {
 
 export function normalizeProfile(p: Partial<Profile> & { id: string }): Profile {
   const base = emptyProfile(p.label);
-  const merged = { ...base, ...p };
+  // 同期や古い保存データで null・undefined が来ても、"null" と入ったり .replace で落ちたりしないよう既定値にする
+  const merged = { ...base } as Profile;
+  for (const [k, v] of Object.entries(p)) if (v != null) (merged as unknown as Record<string, unknown>)[k] = v;
   merged.desiredLocations = [0, 1, 2].map((i) => merged.desiredLocations?.[i] ?? '');
-  merged.qualifications = merged.qualifications ?? [];
+  merged.qualifications = (merged.qualifications ?? []).filter(Boolean).map((q) => ({ name: q.name ?? '', date: q.date ?? '' }));
   return merged;
 }

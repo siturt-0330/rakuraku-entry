@@ -42,13 +42,20 @@ function kanaForms(s: string, hint: Hints['kana']): string[] {
 export function splitPhone(phone: string): string[] {
   const t = phone.normalize('NFKC').trim();
   const parts = t.split(/[\-‐‑‒–—―−ー\s]+/).filter(Boolean);
-  if (parts.length === 3 && parts.every((p) => /^\d+$/.test(p))) return parts;
-  const digits = t.replace(/\D/g, '');
+  const intl = /^\+?81/.test(t.replace(/\s/g, ''));
+  if (!intl && parts.length === 3 && parts.every((p) => /^\d+$/.test(p))) return parts;
+  let digits = t.replace(/\D/g, '');
+  // 国際形式（+81 90-1234-5678・+81 (0)3-…）は先頭の 81 を 0 に戻してから分ける
+  if (intl) digits = '0' + digits.slice(2).replace(/^0/, '');
   const cut = (...lens: number[]) => {
     let i = 0;
     return lens.map((l) => digits.slice(i, (i += l)));
   };
+  // フリーダイヤル・ナビダイヤルなどは 4 桁で区切る（0120-123-456・0800-123-4567）
+  if (/^0(120|570|990)/.test(digits) && digits.length === 10) return cut(4, 3, 3);
+  if (/^0800/.test(digits) && digits.length === 11) return cut(4, 3, 4);
   if (digits.length === 11) return cut(3, 4, 4);
+  // 固定電話の市外局番の長さは地域で違う。ハイフンなしで保存されているときは 03・06 だけ 2 桁、ほかは 3 桁とみなす
   if (digits.length === 10) return /^0[36]/.test(digits) ? cut(2, 4, 4) : cut(3, 3, 4);
   return digits ? [digits] : [];
 }
@@ -73,7 +80,9 @@ function yearForms(y: number, m: number, d: number, era: Hints['era']): string[]
   const w = toWareki(y, m, d);
   const wareki = w ? [`${w.era}${w.year}`, w.year === 1 ? `${w.era}元` : '', `${w.abbr}${w.year}`] : [];
   // 「1999(H11)」のように西暦に和暦を添えた選択肢
-  const seireki = w ? [String(y), `${y}(${w.abbr}${w.year})`, `${y}(${w.era}${w.year})`] : [String(y)];
+  // 西暦とわかっている 2 桁の欄（「19[__]年」）には下 2 桁を入れる。和暦の年数（平成11 の「11」）を入れないため
+  const short = era === 'seireki' ? [String(y).slice(2)] : [];
+  const seireki = w ? [String(y), ...short, `${y}(${w.abbr}${w.year})`, `${y}(${w.era}${w.year})`] : [String(y), ...short];
   // 元号が別のプルダウンになっている「［平成▼］［17▼］年」用に、数字だけの和暦年を最後の候補にする
   const eraNumber = w ? [w.year === 1 ? '元' : '', String(w.year)] : [];
   return era === 'wareki' ? [...wareki, ...eraNumber, ...seireki] : [...seireki, ...wareki, ...eraNumber];
@@ -109,8 +118,17 @@ function ymForms(s: string, h: Hints, kind: FieldKind): string[] {
   const slash = `${y}/${pad2(m)}`;
   const compact = `${y}${pad2(m)}`;
   const dot = `${y}.${pad2(m)}`;
-  const first =
-    h.era === 'wareki' ? wareki : h.dateFormat === 'compact' ? compact : h.dateFormat === 'dot' ? dot : h.dateFormat === 'slash' || h.dateFormat === 'hyphen' ? slash : kanji;
+  const abbr = w ? ({ 令和: 'R', 平成: 'H', 昭和: 'S' } as Record<string, string>)[w.era] : undefined;
+  const byFormat: Partial<Record<NonNullable<Hints['dateFormat']>, string>> = {
+    compact,
+    dot,
+    slash,
+    hyphen: `${y}-${pad2(m)}`,
+    eraDot: abbr && w ? `${abbr}${pad2(w.year)}.${pad2(m)}` : undefined,
+    mdy: `${pad2(m)}/${y}`,
+    dmy: `${pad2(m)}/${y}`,
+  };
+  const first = h.era === 'wareki' ? wareki : (h.dateFormat && byFormat[h.dateFormat]) || kanji;
   return uniq([first, kanji, slash, dot, wareki]);
 }
 
@@ -553,9 +571,9 @@ function rawVariants(key: FieldKey, p: Profile, h: Hints, kind: FieldKind): stri
     case 'employmentType':
       return [p.employmentType];
     case 'currentSalary':
-      return [p.currentSalary, p.currentSalary.replace(/[^\d]/g, '')];
+      return [p.currentSalary, p.currentSalary.normalize('NFKC').replace(/[^\d]/g, '')];
     case 'desiredSalary':
-      return [p.desiredSalary, p.desiredSalary.replace(/[^\d]/g, '')];
+      return [p.desiredSalary, p.desiredSalary.normalize('NFKC').replace(/[^\d]/g, '')];
     case 'availableDate': {
       if (p.availableDate) return [p.availableDate];
       // 新卒は「卒業の翌月」（3月卒業なら4月入社）

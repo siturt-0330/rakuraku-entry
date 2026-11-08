@@ -143,35 +143,40 @@ function stillSelected(r: Result): boolean {
 }
 
 /** 「（大学院生以外の方は「なし」とご記載ください）」「該当しない場合は『なし』と入力」 */
-const SAYS_WRITE_NONE = /[「『"”]?(なし|無し|ナシ)[」』"”]?と(ご)?(記載|記入|入力|書い|お書き)/;
+const SAYS_WRITE_NONE = /[「『"”]?(なし|無し|ナシ)[」』"”]?と(ご)?(記載|記入|入力|書い|お書き)(?!せず|しない|しないで|不要|は不要)/;
 
 /** 「※大学院に所属している方のみ」のような条件付きの欄と、その条件をプロフィールが満たすか */
 const isGrad = (p: Profile) => p.schoolType.startsWith('大学院');
-const CONDITIONS: [RegExp, (p: Profile) => boolean][] = [
+/** プロフィールにない情報なので入れない（当てはまらない人ではないので「なし」とも書かない） */
+const NOT_IN_PROFILE = () => false;
+/** 「学部生・大学院生のみ」「大学・大学院に在籍している方」のように、学部生も対象に入っている */
+const ALSO_UNDERGRAD = /学部生?[・、/／]|[・、/／]学部|大学[・、/／]大学院|大学\d?年生?[・、/／]/;
+const CONDITIONS: [RegExp, (p: Profile, text: string) => boolean][] = [
   // 博士の人の修士課程の学校（「博士（博士後期課程）の方は修士課程の〜」）はプロフィールにない
-  [/博士.{0,10}の方は.{0,3}修士/, () => false],
+  [/博士.{0,10}の方は.{0,3}修士/, NOT_IN_PROFILE],
   // 博士課程の人だけ（「修士・博士課程の方のみ」は大学院生）。「上記で『博士』を選択し〜」「『博士』を選択した場合のみ」も
-  [/(?<![・、/／])(?<!修士.{0,8})(博士(後期)?課程|博士|ドクター)(に)?(在籍|在学)?(している|中)?の?(方|者|生)?(のみ|だけ|に限り)|博士.{0,3}を?選択/, (p) => p.schoolType === '大学院（博士）'],
+  [/(?<![・、/／])(?<!修士.{0,8})(博士(後期)?課程|博士|ドクター)(に)?(在籍|在学)?(している|中)?の?(方|者|生)?(のみ|だけ|に限り)|(?<!修士[・、/／]?)博士.{0,3}を?選択/, (p) => p.schoolType === '大学院（博士）'],
   // 修士課程の人だけ
   [/(修士(課程)?|博士前期(課程)?)(に)?(在籍|在学)?(している|中)?の?(方|者|生)?(のみ|だけ|に限り)(?![・、]?博士)/, (p) => p.schoolType === '大学院（修士）'],
   // 大学院生だけ。「院生の方のみこちらを」「大学院（修士・博士）の方のみ」「大学院に在籍している方は記入」「『最終学歴』で「大学院（修士）」を選択された方は」
   [
     /(大学院|院生).{0,12}(の方|方|者|生)(のみ|だけ|に限り)|修士.{0,4}博士.{0,4}(の方|方|者|生)?(のみ|だけ|に限り)|院生.{0,3}のみ|大学院に(所属|在籍|在学)|(大学院生|院生)の方は.{0,2}(ご)?(記入|入力|回答)|大学院.{0,24}(選択さ?れ?た|選ばれた)方/,
-    isGrad,
+    (p, text) => isGrad(p) || ALSO_UNDERGRAD.test(text),
   ],
   // 学部生だけ
   [/学部生(の方|方|者)?(のみ|だけ|に限り)|学部(に)?(在籍|在学)(している|中)?の?(方|者)?(のみ|だけ)/, (p) => p.schoolType === '大学'],
   [/(既卒|社会人|卒業された|卒業済).{0,8}(の方|方|者)のみ/, (p) => p.graduationStatus === 'graduated'],
   // 「その他学校情報」「ダブルスクール」は、プロフィールにない別の学校
-  [/その他.{0,2}学校情報|ダブルスクール/, () => false],
+  [/その他.{0,2}学校情報|ダブルスクール/, NOT_IN_PROFILE],
   // 「文理区分で理系を選択された方は、下記A〜Eまでの設問にお答えください」（区切りの見出し）
   // 「理系学生のみ」「（理系のみ）」「理系の方だけ」（snar.jp TOK のアンケート）も
-  [/理系.{0,4}選(択さ?れ?た|んだ|ばれた)(方|場合)|理系(の)?(方|者|人|学生|生)?(のみ|だけ|に限り)/, (p) => p.bunri === '理系'],
-  [/文系.{0,4}選(択さ?れ?た|んだ|ばれた)(方|場合)|文系(の)?(方|者|人|学生|生)?(のみ|だけ|に限り)/, (p) => p.bunri === '文系'],
+  [/理系.{0,4}選(択さ?れ?た|んだ|ばれた)(方|場合)|理系(の)?(方|者|人|学生|生)?(のみ|だけ(?!で(は)?なく)|に限り)/, (p) => p.bunri === '理系'],
+  [/文系.{0,4}選(択さ?れ?た|んだ|ばれた)(方|場合)|文系(の)?(方|者|人|学生|生)?(のみ|だけ(?!で(は)?なく)|に限り)/, (p) => p.bunri === '文系'],
   // 編入した学校はプロフィールにないので、「大学編入歴のある方のみ」の欄には入れない
-  [/編入.{0,12}(の方|方|者)のみ|編入(歴|経験)のある/, () => false],
+  [/編入.{0,12}(の方|方|者)のみ|編入(歴|経験)のある/, NOT_IN_PROFILE],
   // 進学予定の大学院はプロフィールにない（「大学院進学予定［あり／なし］」「進学予定の大学院名」）
-  [/進学(予定|先|希望)/, () => false],
+  // 「高校卒業後の進学先」は今の大学なので含めない
+  [/進学(予定|希望)|(大学院|院).{0,6}進学先|進学先.{0,6}(大学院|研究科)/, NOT_IN_PROFILE],
   [/留学.{0,12}(の方|方|者)のみ/, (p) => !!p.studyAbroad && !SAYS_NONE.test(p.studyAbroad.normalize('NFKC'))],
 ];
 
@@ -214,8 +219,11 @@ function applyConditions(fields: ScannedField[], classes: Classification[], prof
     const gradLabel = GRAD_LABEL.test(norm(d.context)) || GRAD_LABEL.test(norm(d.label));
     // 「大学院生以外の方は『なし』とご記載ください」のように、当てはまらない人の書き方が決まっている文字の欄
     const writeNone = /^(text|textarea)$/.test(d.kind) && SAYS_WRITE_NONE.test(text) ? 'なし' : undefined;
-    if (previousSchool || (gradLabel && !isGrad(profile)) || CONDITIONS.some(([re, ok]) => re.test(text) && !ok(profile))) {
-      classes[i] = writeNone ? { ...c, literal: writeNone } : { key: null, confidence: 0, source: c.source };
+    const failed = CONDITIONS.filter(([re, ok]) => re.test(text) && !ok(profile, text));
+    if (previousSchool || (gradLabel && !isGrad(profile)) || failed.length) {
+      // 「なし」と書くのは、条件に当てはまらない人のときだけ。プロフィールにない情報（学部のときの学校・編入した学校）は空のまま
+      const notEligible = (gradLabel && !isGrad(profile)) || failed.some(([, ok]) => ok !== NOT_IN_PROFILE);
+      classes[i] = writeNone && notEligible && !previousSchool ? { ...c, literal: writeNone } : { key: null, confidence: 0, source: c.source };
       owner = { kind: 'skip', index: i };
       return;
     }
@@ -262,7 +270,20 @@ export class FormFiller {
     return { detected, filled: 0, warn: 0, reviews: [] };
   }
 
+  /** 入力中にもう一度呼ばれたとき（ショートカットの連打）は、同じ入力の結果を返す。重ねて走らせると元に戻せなくなる */
+  private running: Promise<FrameStatus> | null = null;
+
   async fill(profile: Profile, settings: Settings, classifyRemote?: ClassifyRemote): Promise<FrameStatus> {
+    if (this.running) return this.running;
+    this.running = this.fillOnce(profile, settings, classifyRemote);
+    try {
+      return await this.running;
+    } finally {
+      this.running = null;
+    }
+  }
+
+  private async fillOnce(profile: Profile, settings: Settings, classifyRemote?: ClassifyRemote): Promise<FrameStatus> {
     // 前回の入力は、いま画面に見えている欄だけ戻して入れ直す。
     // 手順型のフォームで隠れた前のページの欄まで戻すと、入力済みの値が消えてしまう
     this.undo(true);

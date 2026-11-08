@@ -10,6 +10,10 @@ for (const c of 'パピプペポ') {
   HALF_KANA[c] = HALF_KANA[String.fromCharCode(c.charCodeAt(0) - 2)] + 'ﾟ';
 }
 HALF_KANA['ヴ'] = 'ｳﾞ';
+// 半角にない小さい字は、ふつうの大きさの半角にする
+HALF_KANA['ヵ'] = 'ｶ';
+HALF_KANA['ヶ'] = 'ｹ';
+HALF_KANA['ヮ'] = 'ﾜ';
 HALF_KANA['　'] = ' ';
 
 /** 半角カナだけを全角に戻す（NFKC を全体にかけると全角スペースまで半角になるため） */

@@ -19,7 +19,7 @@ export function isSameAsCurrent(text: string): boolean {
 export const SAME_WORDS = /同じ|同一|同上|同様|一緒|変わらない|変更(なし|無し|はない|ありません)/;
 
 /** 帰省先・休暇中の連絡先の言い回し（帰省先・帰郷先・休暇中・休暇期間中・長期休暇時・実家） */
-export const KISEI_WORDS = /帰省|帰郷|休暇|実家|kisei/;
+export const KISEI_WORDS = /帰省|帰郷|休暇|実家|kisei|permanent|vacation|holiday/i;
 
 /** 「現住所と同じ／現住所と異なる」「同様／別の住所」のように、同じ側と違う側の対になった選択肢。なければ null */
 export function sameDiffOptions(options: string[]): { same: string; diff: string } | null {
@@ -90,16 +90,48 @@ export function textOf(node: Node | null, limit = 120): string {
   const doc = node.ownerDocument ?? document;
   const walker = doc.createTreeWalker(node, NodeFilter.SHOW_TEXT);
   let out = '';
+  let prevInline = false;
+  const skipCache = new Map<Element, boolean>();
   // limit を超えたら打ち切る（呼び出し側は長さで「広すぎる範囲」を判断する）
   while (walker.nextNode() && out.length <= limit) {
     const t = walker.currentNode;
-    if (t.parentElement && SKIP_TEXT_PARENTS.has(t.parentElement.tagName)) continue;
-    // 独自プルダウンに表示中の値・「選択してください」・jqTransform の飾りの選択肢は見出しではない
-    if (t.parentElement?.closest(`${COMBO_SELECTOR}, [class*="placeholder" i], .jqTransformSelectWrapper`)) continue;
-    const v = (t.nodeValue ?? '').replace(/\s+/g, ' ').trim();
-    if (v) out += (out ? ' ' : '') + v;
+    const parent = t.parentElement;
+    // 独自プルダウンに表示中の値・jqTransform の飾りの選択肢は見出しではない
+    if (parent?.closest(`${COMBO_SELECTOR}, .jqTransformSelectWrapper`)) continue;
+    if (parent && skipTextIn(parent, node, skipCache)) continue;
+    // 「氏　名」の字の間の空白は詰める
+    const v = (t.nodeValue ?? '').replace(/\s+/g, ' ').trim().replace(/(?<=[^\x00-\x7f]) (?=[^\x00-\x7f])/g, '');
+    if (!v) continue;
+    // 「メール<span>アドレス</span>」「お<b>名前</b>」のように文の途中の飾りの要素で切れた文字は、空白を入れずにつなぐ
+    const inline = !!parent && parent !== node && INLINE_TAGS.has(parent.tagName);
+    const glue = out && (inline || prevInline) && /[^\x00-\x7f]$/.test(out) && /^[^\x00-\x7f]/.test(v) ? '' : ' ';
+    out += (out ? glue : '') + v;
+    prevInline = inline;
   }
   return out;
+}
+
+const INLINE_TAGS = new Set(['SPAN', 'B', 'STRONG', 'EM', 'I', 'U', 'FONT', 'A', 'SMALL', 'MARK', 'RUBY', 'RB']);
+/** 見出しとして読まない要素：ボタン・ふりがな（rt）・選択肢・隠れた要素・「選択してください」の飾り */
+const SKIP_TEXT_IN = new Set([...SKIP_TEXT_PARENTS, 'RT', 'RP']);
+
+/** el から root までのあいだに、読まない要素（ボタンの中・非表示・placeholder の飾り）があるか */
+function skipTextIn(el: Element, root: Node, cache: Map<Element, boolean>): boolean {
+  const hit = cache.get(el);
+  if (hit !== undefined) return hit;
+  let skip = false;
+  if (SKIP_TEXT_IN.has(el.tagName)) skip = true;
+  else if (/placeholder/i.test(el.getAttribute('class') ?? '')) skip = true;
+  else if (el !== root && el instanceof HTMLElement && el.isConnected) {
+    // 読んでいる範囲の中で隠れている文字（エラー文・ツールチップ）は読まない。
+    // 範囲そのものが隠れているとき（aria-labelledby の先が非表示の要素）は読む
+    const style = getComputedStyle(el);
+    if (style.display === 'none') skip = true;
+    else if (style.visibility === 'hidden' && el.parentElement && getComputedStyle(el.parentElement).visibility !== 'hidden') skip = true;
+  }
+  if (!skip && el !== root && el.parentElement && root.contains(el.parentElement)) skip = skipTextIn(el.parentElement, root, cache);
+  cache.set(el, skip);
+  return skip;
 }
 
 function isControl(n: Node): boolean {
@@ -292,17 +324,37 @@ function columnHeader(cell: HTMLTableCellElement): string {
   const table = cell.closest('table');
   const row = cell.parentElement as HTMLTableRowElement | null;
   if (!table || !row) return '';
+  // 見出しの行は th だけの行（「氏名｜山田 太郎（変更不可）」のような表示だけの行は見出しではない）
   const headerRow =
     table.tHead?.rows[0] ??
-    Array.from(table.rows).find((r) => r !== row && r.querySelector('th') && !r.querySelector(VISIBLE_CONTROLS));
+    Array.from(table.rows).find(
+      (r) => r !== row && r.querySelector('th') && !r.querySelector(VISIBLE_CONTROLS) && Array.from(r.cells).every((c) => c.tagName === 'TH' || !textOf(c, 5)),
+    );
   if (!headerRow || headerRow === row) return '';
-  return textOf(headerRow.cells[cell.cellIndex] ?? null, 40);
+  // colspan で位置がずれるので、見た目の列の位置でそろえる
+  const col = visualColumn(row, cell);
+  let x = 0;
+  for (const h of Array.from(headerRow.cells)) {
+    if (col >= x && col < x + h.colSpan) return textOf(h, 40);
+    x += h.colSpan;
+  }
+  return '';
+}
+
+function visualColumn(row: HTMLTableRowElement, cell: HTMLTableCellElement): number {
+  let x = 0;
+  for (const c of Array.from(row.cells)) {
+    if (c === cell) return x;
+    x += c.colSpan;
+  }
+  return x;
 }
 
 /** 表の行見出し（th）・dt・legend など、構造上の見出し */
 function structuralHeader(el: HTMLElement): string {
   let node = el.parentElement;
-  for (let depth = 0; node && depth < 6; depth++, node = node.parentElement) {
+  // 入れ子の表（外の行見出し「氏名」の中に、姓・名の欄だけの表）まで届くよう、少し深く見る
+  for (let depth = 0; node && depth < 10; depth++, node = node.parentElement) {
     if (node.tagName === 'TD' || node.tagName === 'TH') {
       const cell = node as HTMLTableCellElement;
       const row = cell.parentElement as HTMLTableRowElement | null;
@@ -311,9 +363,13 @@ function structuralHeader(el: HTMLElement): string {
       // td は「［ ］｜年｜［ ］｜月」の単位のこともあるので、これまでどおり行の最初のものを使う
       const cells = Array.from(row?.children ?? []);
       const isHeader = (c: Element) => c !== cell && !c.contains(el) && !c.querySelector(VISIBLE_CONTROLS);
+      // 「姓｜［ ］｜名｜［ ］」が td だけで並ぶ行は、すぐ左のマスがその欄の見出し（単位の「年」「月」は除く）
+      const left = cell.previousElementSibling;
+      const leftText = left && isHeader(left) ? textOf(left, 20) : '';
       const header =
         cells.slice(0, Math.max(0, cells.indexOf(cell))).reverse().find((c) => c.tagName === 'TH' && isHeader(c)) ??
-        cells.find(isHeader);
+        (leftText && !UNIT_ONLY.test(leftText) && !NOT_A_HEADING.test(leftText) ? left : null) ??
+        cells.find((c) => isHeader(c) && !NOT_A_HEADING.test(textOf(c, 20)));
       const t = textOf(header ?? null, 60);
       if (t && !/^[\s\-‐‑‒–—―−ー－ｰ~〜～()（）]*$/.test(t)) {
         // 「大学｜［学校名］｜［学部］」「大学院｜［学校名］｜［研究科］」のように行見出しと列見出しの両方がある表は、両方を使う
@@ -336,7 +392,7 @@ function structuralHeader(el: HTMLElement): string {
       if (t) return t;
     }
     if (node.tagName === 'FIELDSET') {
-      const t = textOf(node.querySelector('legend'), 60);
+      const t = textOf(node.querySelector(':scope > legend'), 60);
       if (t) return t;
     }
     // <div role="group" aria-labelledby="…"> の見出し（axol の「入学年月」など。年・月の欄には「年」「月」のラベルしかない）。
@@ -360,7 +416,7 @@ function structuralHeader(el: HTMLElement): string {
  * 入力例と、区切りの記号だけの文字。ダッシュは見た目が同じで文字が違うものが多い（マイナビの電話番号は「–」）ので、
  * 区切りの記号を書くときは、この並び（\-‐‑‒–—―−ー－ｰ）をそろえて使う
  */
-const NOT_A_HEADING = /^(例|e\.?g\.?|ex\.?)\s*[:：(（]|^[\s\-‐‑‒–—―−ー－ｰ~〜～/／:：()（）]*$/i;
+const NOT_A_HEADING = /^[(（]?(例|e\.?g\.?|ex\.?)\s*[:：(（)）]|^[\s\-‐‑‒–—―−ー－ｰ~〜～/／:：()（）]*$/i;
 
 /**
  * node の中に、el 以外の入力欄に紐づいた <label> があるか。
@@ -428,7 +484,7 @@ const HEADING_TAGS = /^(H[1-6]|LEGEND|CAPTION)$/;
 
 function isHeadingLike(el: Element): boolean {
   if (/^(SCRIPT|STYLE|TEMPLATE)$/.test(el.tagName)) return false;
-  if (el.querySelector('input, select, textarea, button')) return false;
+  if (el.querySelector(`${VISIBLE_CONTROLS}, button`)) return false;
   if (HEADING_TAGS.test(el.tagName)) return true;
   // 入力欄のない1セルの行（<tr><th colspan="2">帰省先</th></tr>）
   if (el.tagName === 'TR') return el.children.length === 1;
@@ -443,6 +499,7 @@ function sectionText(el: HTMLElement): string {
   const ownDd = el.closest('dd');
   // 欄のすぐ前の「<span>郵便番号</span>」は欄そのものの見出しで、区切り（「帰省先」）ではない
   const own = siblingText(el, -1, 40);
+  let ownCtx: string | undefined;
   let node: Element | null = el;
   for (let depth = 0; node && depth < 8; depth++, node = node.parentElement) {
     let sib = node.previousElementSibling;
@@ -452,6 +509,8 @@ function sectionText(el: HTMLElement): string {
       // 先頭の「*」は必須の印（「*出身高校名を入力してください。」）なので外して見る
       const t = textOf(sib, 40).replace(/^[*＊]\s*/, '');
       if (own && t === own) continue;
+      // 欄が深く包まれていて手前の見出しが取れないとき、欄だけを包む箱のすぐ前の文字（「郵便番号」）はその欄の見出しで、区切りではない
+      if (!own && sib === node.previousElementSibling && !HEADING_TAGS.test(sib.tagName) && node.querySelectorAll(VISIBLE_CONTROLS).length <= 1 && t === (ownCtx ??= contextText(el))) continue;
       // 都道府県のラジオを地区ごとに分けた小見出し（「関東地区」「近畿地方」）は区切りではない（上の「所在地を選択してください」を見る）
       if (REGION_HEADING.test(t)) continue;
       // 「例（111-0000）」や「※〜」の注意書きは見出しではない

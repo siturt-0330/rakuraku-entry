@@ -76,14 +76,14 @@ const AUTOCOMPLETE: Record<string, FieldKey> = {
  */
 const TEXT_RULES: [Category, RegExp][] = [
   ['emailConfirm', /(メール|e-?mail|mail).*(確認|再入力|もう一度|confirm)|(確認|confirm).*(メール|e-?mail)/],
-  ['emailSub', /(予備|サブ|携帯|第2|2つ目|セカンド|個人).{0,4}(メール|mail)|(メール|mail).{0,6}(予備|サブ|2)|(携帯|モバイル|スマホ|サブ|予備).{0,3}アドレス/],
+  ['emailSub', /(予備|サブ|携帯|第2|2つ目|セカンド).{0,4}(メール|mail)|(メール|mail).{0,6}(予備|サブ|2)|(携帯|モバイル|スマホ|サブ|予備).{0,3}アドレス/],
   ['email', /メール|e-?mail|mail/],
   ['relation', /続柄|間柄|ご関係/],
   ['station', /最寄|沿線|路線|駅/],
   ['age', /年齢|^age$/],
   ['nationality', /国籍|nationality/],
   // 「最終学歴となる大学の入学年月」は入学年月
-  ['schoolType', /学校区分|学校種別|学校の種類|学校種類|在籍区分|学歴区分|最終学歴(?!とな|であ)/],
+  ['schoolType', /学校区分|学校種別|学校の種類|学校種類|在籍区分|学歴区分|最終学歴(?!とな|であ|.{0,3}(学校名|卒業|入学|年月))/],
   ['bunri', /文理|文系.{0,3}理系/],
   ['graduationStatus', /卒業区分|卒業状況|見込.{0,2}区分|新卒.{0,3}既卒|卒業見込.{0,4}(区分|有無)/],
   ['fieldCategory', /学科系統|専攻分野|系統/],
@@ -133,7 +133,7 @@ const TEXT_RULES: [Category, RegExp][] = [
   ['schoolOwnership', /設置区分|設置者|国公私立|国・公・私立/],
   ['schoolInitial', /頭文字|最初の.?文字|1文字目|一文字目|イニシャル/],
   ['school', /学校名|大学名|大学|学校|school|university|college/],
-  ['name', /氏名|名前|姓名|姓|^名|full ?name|last ?name|first ?name|family ?name|given ?name|^name$|^your name/],
+  ['name', /氏名|名前|姓名|姓|苗字|^名(?!称)|full ?name|last ?name|first ?name|family ?name|given ?name|^name$|^your name/],
 ];
 
 /** name / id 属性用 */
@@ -177,17 +177,19 @@ const ATTR_RULES: [Category, RegExp][] = [
 ];
 
 /** 本人以外の人を指す言葉（紹介者のお名前・保護者の電話番号など） */
-const OTHER_PERSON = /紹介者|推薦者|保護者|担当者|代表者|上司|配偶者|父親|母親|ご両親|家族|保証人|面接官|社員|知人|友人|指導教|教官|教授/;
+const OTHER_PERSON = /紹介者|推薦者|保護者|親権者|世帯主|担当者|代表者|上司|配偶者|父|母(?!校|国)|兄弟|姉妹|ご両親|家族|保証人|面接官|社員|知人|友人|指導教|教官|教授/;
 /** 区切りの見出し（h3「保護者連絡先」など）で本人以外とわかる言葉。「担当者からのお知らせ」のような見出しは含めない */
-const OTHER_PERSON_SECTION = /紹介者|推薦者|保護者|配偶者|父親|母親|ご両親|家族|保証人/;
-const PERSONAL_CATEGORIES = new Set<string>(['name', 'roman', 'phone', 'email', 'emailSub', 'emailConfirm', 'birth', 'address']);
+const OTHER_PERSON_SECTION = /紹介者|推薦者|保護者|親権者|世帯主|配偶者|父|母(?!校|国)|兄弟|姉妹|ご両親|家族|保証人/;
+const PERSONAL_CATEGORIES = new Set<string>(['name', 'roman', 'phone', 'email', 'emailSub', 'emailConfirm', 'birth', 'address', 'postal', 'prefecture', 'city', 'building', 'age']);
 
 const KANA_TEXT = /フリガナ|ふりがな|よみがな|ひらがな|平仮名|カナ|かな|kana|furigana/g;
 const KANA_ATTR = /kana|furi|yomi/;
 const KANA_WORD = /フリガナ|ふりがな|よみがな|ひらがな|平仮名|カナ|かな|kana|furigana|^セイ(?![ァ-ヶ])|^メイ(?![ァ-ヶ])/;
 /** 帰省先の言い回し（extract.ts の KISEI_WORDS。「休暇期間中」「長期休暇時」「帰郷先」も帰省先） */
 const KISEI = KISEI_WORDS;
-const EMERGENCY = /緊急|emergency|kinkyu/;
+const EMERGENCY = /緊急|非常時|非常用|emergency|kinkyu/;
+/** 出身地・本籍地はプロフィールにないので、都道府県の欄でも入れない */
+const BIRTHPLACE = /出身地|出生地|本籍|出身県|出身都道府県|生まれ/;
 const PHOTO = /写真|photo|画像|顔/;
 
 function firstMatch(rules: [Category, RegExp][], text: string): Category | null {
@@ -201,6 +203,8 @@ function stripModifiers(text: string) {
   return text
     .replace(/^\s*(セイ|メイ)(?![ァ-ヶ])/, (m) => (m.includes('セイ') ? '姓' : '名'))
     .replace(KANA_TEXT, ' ')
+    // 「TOEIC以外の英語資格」「携帯以外のメールアドレス」は、その前の言葉の欄ではない
+    .replace(/(toeic|toefl|英検|携帯|スマホ)(の)?以外/gi, ' ')
     .trim();
 }
 
@@ -263,7 +267,7 @@ function classifyField(d: FieldDescriptor): Classification {
   let cat: Category | null = optionCategory(d);
   if (cat === 'prefecture') {
     // 都道府県が並んでいても、見出しが希望勤務地なら希望勤務地。出身地・本籍地はプロフィールにないので入れない
-    if (/出身地|出生地|本籍/.test(`${near} ${ctx}`)) return result(null, 0);
+    if (BIRTHPLACE.test(`${near} ${ctx}`)) return result(null, 0);
     if ((firstMatch(TEXT_RULES, stripModifiers(near)) ?? firstMatch(TEXT_RULES, stripModifiers(ctx))) === 'desiredLocation') cat = 'desiredLocation';
   }
   let conf: number = cat ? CONF.context : 0;
@@ -326,6 +330,11 @@ function classifyField(d: FieldDescriptor): Classification {
   // 内線・FAX は電話番号ではない
   if (cat === 'phone' && (/内線|\bext\b/i.test(near) || /fax|ファックス|ファクス/i.test(`${near} ${ctx}`))) return result(null, 0);
 
+  // 勤務先・学校の電話番号や住所は、本人の電話番号・住所ではない
+  const PLACE_CATS = ['phone', 'postal', 'prefecture', 'city', 'building', 'address'];
+  if (PLACE_CATS.includes(cat) && (/勤務先|勤め先|前職|現職|会社/.test(`${near} ${ctx}`) || /勤務先|勤め先|前職|現職/.test(section))) return result(null, 0);
+  if (PLACE_CATS.includes(cat) && cat !== 'prefecture' && (/学校|大学|高校|在籍校/.test(`${near} ${ctx}`) || /^(在籍)?(学校|大学)(情報)?$/.test(section))) return result(null, 0);
+  if (cat === 'prefecture' && BIRTHPLACE.test(`${near} ${ctx}`)) return result(null, 0);
   // 欄の前後に @ があれば、見出しが何であってもメールアドレス
   const atSign = /[@＠]$/.test(d.prefix.trim()) || /^[@＠]/.test(d.suffix.trim());
   if (atSign && cat !== 'email' && cat !== 'emailConfirm' && cat !== 'emailSub') {
@@ -343,7 +352,10 @@ function classifyField(d: FieldDescriptor): Classification {
   }
   // 「入学／卒業年月」のように 1 つのセルに入学と卒業の欄が並ぶときは、欄のすぐ手前の見出し（lead）で見分ける
   const lead = norm(d.lead);
-  const term = /卒業|修了/.test(near) ? 'grad' : /入学/.test(near) ? 'adm' : /卒業|修了/.test(lead) ? 'grad' : /入学/.test(lead) ? 'adm' : null;
+  const fromLead = /卒業|修了/.test(lead) ? 'grad' : /入学/.test(lead) ? 'adm' : null;
+  // 「入学・卒業年月」のように見出しに両方あるときは、欄のすぐ手前の見出しを先に見る
+  const both = /卒業|修了/.test(near) && /入学/.test(near);
+  const term = both && fromLead ? fromLead : /卒業|修了/.test(near) ? 'grad' : /入学/.test(near) ? 'adm' : fromLead;
   if (term && (cat === 'graduation' || cat === 'admission')) cat = term === 'grad' ? 'graduation' : 'admission';
   // 「卒業学校名」「卒業学部」のように、卒業した学校の名前を聞いている文字の欄
   if (cat === 'graduation' && d.kind === 'text' && !isDateLike(d, near) && !/年|月|日|時期|date|year/.test(`${near} ${ctx}`)) {
@@ -623,7 +635,7 @@ export function adjustForForm(fields: ScannedField[], input: Classification[]): 
 
 function namePart(nearRaw: string, attrs: string): 'last' | 'first' | null {
   const t = nearRaw.replace(/氏名|姓名|お名前|名前|フリガナ|ふりがな|ローマ字|緊急連絡先/g, '');
-  const last = /姓|せい|セイ|ｾｲ|苗字|名字|last|family|surname/i.test(t);
+  const last = /姓|^氏(?!名)|[（(]氏[）)]|せい|セイ|ｾｲ|苗字|名字|last|family|surname/i.test(t);
   const first = /名|めい|メイ|ﾒｲ|first|given/i.test(t.replace(/苗字|名字/g, ''));
   // 「フリガナ（セイ・メイ）」「氏名（姓・名）」は1つの欄に両方を入れる
   if (last && first) return null;
