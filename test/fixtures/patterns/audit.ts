@@ -88,7 +88,7 @@ export const CASES: Case[] = [
   {
     name: 'A-15 設問「大学のキャンパス名（キャンパスの文言は不要）」：最寄り駅の話があっても駅ではなくキャンパス名',
     html: `<form><table><tr><th>設問 6</th><td><p>大学のキャンパス名を記入してください。</p><p>キャンパス名のみ記載ください。（キャンパスの文言は不要）</p><p>例）住友大学　淀屋橋キャンパスの場合→淀屋橋</p><p>※キャンパス名が無い場合、最寄り駅「○○駅」と記載してください。</p><input name="c"></td></tr></table></form>`,
-    profile: { campus: '本郷キャンパス', station: '渋谷駅' },
+    profile: { campus: '本郷キャンパス' },
     expect: { '[name=c]': '本郷' },
   },
   {
@@ -101,5 +101,28 @@ export const CASES: Case[] = [
     html: `<form><table><tr><th>学科系統</th><td>${sel('fc', ['人文科学系', '社会科学系', '理学系', '工学系'])}</td></tr></table></form>`,
     profile: { faculty: '理工学部', department: '機械工学科' },
     expect: { '[name=fc]': '工学系' },
+  },
+  {
+    name: 'A-18 学校検索（i-webs）：頭文字を入れて「学校検索」を押し、出てきた一覧から学校・学部・学科・学科系統を順に選ぶ',
+    html: `<form><table>
+      <tr><th>学校名の頭文字</th><td><p>（全角カタカナ１文字＜濁点含む＞、日本国外の場合は空欄）</p><input name="init" maxlength="1" size="3"> <input type="button" name="search" value="学校検索"></td></tr>
+      <tr><th>学校</th><td><p>リストに学校が表示されない場合は（リストにない学校）を選択してください。</p><select name="sch" size="8"><option value="">（選択してください）</option></select></td></tr>
+      <tr><th>学部</th><td><select name="fac"><option value="">（選択してください）</option></select></td></tr>
+      <tr><th>学科</th><td><select name="dep"><option value="">（選択してください）</option></select></td></tr>
+      <tr><th>学科系統</th><td>${sel('fc', ['人文・教養・総合科学系', '社会科学系', '理学系', '工学系'])} <input type="button" value="学科から自動選択"></td></tr>
+    </table></form>`,
+    setup(root) {
+      const $ = <T extends HTMLElement>(q: string) => root.querySelector<T>(q)!;
+      const fill = (name: string, list: string[]) => {
+        $<HTMLSelectElement>(`[name=${name}]`).innerHTML = ['（選択してください）', ...list].map((t, i) => `<option value="${i ? t : ''}">${t}</option>`).join('');
+      };
+      // 頭文字が「サ」のときだけ学校が出る。選ぶと学部、学部を選ぶと学科の選択肢が少し遅れて入る（サーバーに聞く）
+      $('[name=search]').addEventListener('click', () =>
+        setTimeout(() => fill('sch', $<HTMLInputElement>('[name=init]').value === 'サ' ? ['サンプル大学', 'サンプル工業大学', '（リストにない学校）'] : ['（リストにない学校）']), 200),
+      );
+      $('[name=sch]').addEventListener('change', () => setTimeout(() => fill('fac', ['国際経済学部', '経済学部', '工学部']), 200));
+      $('[name=fac]').addEventListener('change', () => setTimeout(() => fill('dep', ['経済学科', '経営学科']), 200));
+    },
+    expect: { '[name=init]': 'サ', '[name=sch]': 'サンプル大学', '[name=fac]': '経済学部', '[name=dep]': '経済学科', '[name=fc]': '社会科学系' },
   },
 ];

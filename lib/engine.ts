@@ -307,6 +307,8 @@ export class FormFiller {
 
     this.results = fields.map((field, i) => this.fillField(field, classes[i]!, profile, settings));
     await this.fillCombos(settings.threshold);
+    // 頭文字を入れたら「学校検索」を押して学校の一覧を出す。一覧・学部・学科は下の入れ直しで順に選ぶ
+    this.clickSchoolSearch();
 
     await this.retryDependentSelects(settings.threshold);
     await this.fillNewlyAvailable(profile, settings);
@@ -337,6 +339,28 @@ export class FormFiller {
     this.snapshots.set(field, takeSnapshot(field));
     this.apply(result, settings.threshold);
     return result;
+  }
+
+  /**
+   * 学校名の頭文字の欄の横の「学校検索」「検索」ボタン（i-webs など）。押すと学校の一覧のプルダウンに選択肢が入る。
+   * フォームを送信してしまわないよう、type="button" のボタンとリンクだけ押す
+   */
+  private clickSchoolSearch() {
+    for (const r of this.results) {
+      if (r.key !== 'schoolInitial' || (r.status !== 'ok' && r.status !== 'warn')) continue;
+      const el = r.field.elements[0]!;
+      if (!(el instanceof HTMLInputElement)) continue;
+      const box = el.closest('td, dd, li, p, div');
+      if (!box) continue;
+      const button = Array.from(box.querySelectorAll<HTMLElement>('input[type="button"], button[type="button"], a')).find((b) => {
+        const label = (b instanceof HTMLInputElement ? b.value : b.textContent ?? '').replace(/\s/g, '');
+        if (!/^(学校)?検索(する)?$|^学校を?検索/.test(label)) return false;
+        // リンクは、ページを移動しないもの（javascript: や # や onclick）だけ
+        if (b instanceof HTMLAnchorElement) return /^(javascript:|#|$)/.test(b.getAttribute('href') ?? '');
+        return !(b as HTMLButtonElement).disabled;
+      });
+      button?.click();
+    }
   }
 
   /** 待っている独自プルダウンを、ページの上から順に1つずつ開いて選ぶ（年→月→日の連動にも対応できる） */
