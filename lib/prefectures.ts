@@ -38,6 +38,7 @@ export const PREFECTURE_KANA: Record<string, string> = Object.fromEntries(
 
 export const SCHOOL_TYPES = ['大学', '大学院（修士）', '大学院（博士）', '短期大学', '高等専門学校', '専門学校', '海外の学校', '高校'];
 export const BUNRI = ['文系', '理系', 'その他'];
+export const ADVISOR_TITLES = ['教授', '准教授', '講師', '助教', 'その他'];
 export const DEGREES = ['学士', '修士', '博士', '専門職学位', '短期大学士', '準学士'];
 export const FIELD_CATEGORIES = [
   '人文科学系', '社会科学系（法・政治）', '社会科学系（経済・経営・商）', '社会科学系（社会・その他）',

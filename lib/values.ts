@@ -485,6 +485,12 @@ function rawVariants(key: FieldKey, p: Profile, h: Hints, kind: FieldKind): stri
     }
     case 'advisor':
       return [p.advisor];
+    case 'advisorTitle': {
+      // 研究室・ゼミがない人は「無」「なし」「該当なし」を選ぶ
+      if (!p.advisorTitle) return p.lab || p.advisor ? [] : ['無', 'なし', '無し', '該当なし', '該当無し', 'いない'];
+      const same: Record<string, string[]> = { 准教授: ['准教授', '助教授'], 講師: ['講師', '専任講師'], 助教: ['助教', '助手'] };
+      return same[p.advisorTitle] ?? [p.advisorTitle];
+    }
     case 'researchTheme':
       return [p.researchTheme];
     case 'highSchool':
@@ -517,6 +523,12 @@ function rawVariants(key: FieldKey, p: Profile, h: Hints, kind: FieldKind): stri
       return ymForms(p.driverLicenseDate, h, kind);
     case 'toeic':
       return p.toeic ? [p.toeic, `${p.toeic}点`] : [];
+    case 'toeicListening':
+      return p.toeicListening ? [p.toeicListening, `${p.toeicListening}点`] : [];
+    case 'toeicReading':
+      return p.toeicReading ? [p.toeicReading, `${p.toeicReading}点`] : [];
+    case 'grade':
+      return gradeForms(p, new Date());
     case 'toeicDate':
       return ymForms(p.toeicDate, h, kind);
     case 'toefl':
@@ -599,6 +611,8 @@ const NO_WIDTH_KEYS = new Set<FieldKey>([
   'portfolioUrl', 'githubUrl', 'photo',
 ]);
 
+/** 有無を聞かれたとき、空なら「ない」と答えてよいスコア */
+const SCORE_KEYS = new Set<FieldKey>(['toeic', 'toefl', 'eiken']);
 const YES_WORDS = ['はい', 'あり', '有', '有り', 'ある', 'yes'];
 const NO_WORDS = ['いいえ', 'なし', '無', '無し', 'ない', 'no'];
 /**
@@ -630,6 +644,8 @@ export function valueVariants(key: FieldKey, p: Profile, h: Hints, kind: FieldKi
   // 「現住所と同じ／現住所と異なる」「同様／別の住所」の選択肢は、同じなら「同じ」の側
   const sameDiff = key === 'kiseiSameCheck' && (kind === 'radio' || kind === 'select') ? sameDiffOptions(options) : null;
   if (sameDiff) return [kiseiIsSame(p) ? sameDiff.same : sameDiff.diff];
+  // 「TOEFLスコアを取得していますか？」：スコアが空なら「取得していない」
+  if (yesNo && !values.length && SCORE_KEYS.has(key)) return [yesNo.no, ...NO_WORDS];
   if (yesNo && values.length && !YES_WORDS.includes(values[0]!)) {
     return SAYS_NONE.test(values[0]!.normalize('NFKC')) ? [yesNo.no, ...NO_WORDS] : [yesNo.yes, ...YES_WORDS];
   }
@@ -663,4 +679,26 @@ function guessFieldCategory(name: string): string[] {
   const t = name.normalize('NFKC');
   if (!t.trim()) return [];
   return FIELD_GUESS.find(([re]) => re.test(t))?.[1] ?? [];
+}
+
+/** 年度（4 月始まり） */
+const fiscalYear = (y: number, m: number) => (m >= 4 ? y : y - 1);
+
+/**
+ * 今の学年。入学年月から数える（なければ卒業年月と課程の長さから）。
+ * 選択肢の書き方がサイトごとに違うので「学部3年」「大学3年生」「3年」「3回生」「B3」「修士1年」「M1」などを並べる
+ */
+function gradeForms(p: Profile, today: Date): string[] {
+  const now = fiscalYear(today.getFullYear(), today.getMonth() + 1);
+  const length = p.schoolType === '大学院（修士）' ? 2 : p.schoolType === '大学院（博士）' ? 3 : /短期大学|高等専門|専門学校/.test(p.schoolType) ? 2 : 4;
+  const adm = parseYmd(p.admission);
+  const grad = parseYmd(p.graduation);
+  let n = 0;
+  if (adm) n = now - fiscalYear(adm[0], adm[1]) + 1;
+  else if (grad) n = length - (fiscalYear(grad[0], grad[1]) - now);
+  if (n < 1 || n > 9) return [];
+  if (p.schoolType === '大学院（修士）') return [`修士${n}年`, `修士${n}年生`, `M${n}`, `博士前期${n}年`, `大学院${n}年`, `院${n}年`, `${n}年`];
+  if (p.schoolType === '大学院（博士）') return [`博士${n}年`, `博士${n}年生`, `D${n}`, `博士後期${n}年`, `大学院${n}年`, `${n}年`];
+  const school = p.schoolType === '大学' || !p.schoolType ? ['学部', '大学'] : [p.schoolType.replace(/（.*）/, '')];
+  return [...school.flatMap((s) => [`${s}${n}年`, `${s}${n}年生`]), `${n}年`, `${n}年生`, `${n}回生`, `B${n}`];
 }

@@ -125,4 +125,53 @@ export const CASES: Case[] = [
     },
     expect: { '[name=init]': 'サ', '[name=sch]': 'サンプル大学', '[name=fac]': '経済学部', '[name=dep]': '経済学科', '[name=fc]': '社会科学系' },
   },
+  // 指導教官の職位・研究テーマの「未定」（2026-11-08 に本人の画面から）
+  {
+    name: 'A-19 「指導教官の職位について選択」：准教授',
+    html: `<form><table><tr><th>設問 3</th><td><p>指導教官の職位について選択してください。</p><p>※ゼミ・研究室の該当が無い場合は、「無」を選択してください。</p>${sel('t', ['教授', '准教授', '助教', '講師', 'その他', '無'])}</td></tr></table></form>`,
+    profile: { lab: '山本ゼミ', advisor: '山本 一郎', advisorTitle: '准教授' },
+    expect: { '[name=t]': '准教授' },
+  },
+  {
+    name: 'A-20 「指導教官の職位」：ゼミ・研究室がない人は「無」',
+    html: `<form><table><tr><th>設問 3</th><td><p>指導教官の職位について選択してください。</p><p>※ゼミ・研究室の該当が無い場合は、「無」を選択してください。</p>${sel('t', ['教授', '准教授', '助教', '講師', 'その他', '無'])}</td></tr></table></form>`,
+    profile: { lab: '', advisor: '', advisorTitle: '' },
+    expect: { '[name=t]': '無' },
+  },
+  {
+    name: 'A-21 研究テーマが決まっていない人は「未定」',
+    html: `<form><table><tr><th>設問 4</th><td><p>研究テーマを記入してください。</p><p>※決まっていない場合は「未定」とご記入ください。</p><input name="r"></td></tr></table></form>`,
+    profile: { researchTheme: '' },
+    expect: { '[name=r]': '未定' },
+  },
+  // 学年・TOEIC のリスニングとリーディング・TOEFL の有無（2026-11-09 に本人の画面から）
+  (() => {
+    // 今日が何年度でも 3 年生になる入学年月
+    const t = new Date();
+    const fy = t.getMonth() + 1 >= 4 ? t.getFullYear() : t.getFullYear() - 1;
+    return {
+      name: 'A-22 「現在の学年を選択してください」：入学年月から数えて学部3年',
+      html: `<form><table><tr><th>設問 4</th><td><p>現在の学年を選択してください。</p>${sel('g', ['学部1年', '学部2年', '学部3年', '学部4年', '修士1年', '修士2年', 'その他'])}</td></tr></table></form>`,
+      profile: { admission: `${fy - 2}-04` },
+      expect: { '[name=g]': '学部3年' },
+    } as Case;
+  })(),
+  {
+    name: 'A-23 TOEIC：合計・リスニング・リーディングを別々に入れ、TOEFL は取得していない',
+    html: `<form><table><tr><th>設問 5</th><td>
+      <p>TOEICスコアを取得していますか？</p>${sel('has', ['取得している', '取得していない'])}
+      <p>最新のTOEICスコアを入力してください。</p><input name="total">
+      <p>最新のTOEICスコア（リスニング）を入力してください。</p><input name="l">
+      <p>最新のTOEICスコア（リーディング）を入力してください。</p><input name="r">
+      <p>TOEFLスコアを取得していますか？</p>${sel('toefl', ['取得している', '取得していない'])}
+    </td></tr></table></form>`,
+    profile: { toeic: '675', toeicListening: '360', toeicReading: '315', toefl: '' },
+    expect: { '[name=has]': '取得している', '[name=total]': '675', '[name=l]': '360', '[name=r]': '315', '[name=toefl]': '取得していない' },
+  },
+  {
+    name: 'A-24 TOEIC のリスニング・リーディングが空なら、合計を入れない',
+    html: `<form><table><tr><th>TOEICスコア（リスニング）</th><td><input name="l"></td></tr><tr><th>TOEICスコア（リーディング）</th><td><input name="r"></td></tr></table></form>`,
+    profile: { toeic: '675' },
+    expect: { '[name=l]': '', '[name=r]': '' },
+  },
 ];

@@ -80,6 +80,8 @@ export interface Profile {
   /** キャンパス名。「キャンパス」は付けない（淀屋橋） */
   campus: string;
   advisor: string;
+  /** 指導教員の職位（教授・准教授・講師・助教・その他） */
+  advisorTitle: string;
   researchTheme: string;
   highSchool: string;
   highSchoolAdmission: string;
@@ -91,6 +93,9 @@ export interface Profile {
   driverLicenseDate: string;
   toeic: string;
   toeicDate: string;
+  /** TOEIC のリスニング・リーディングのスコア（合計とは別に聞かれることがある） */
+  toeicListening: string;
+  toeicReading: string;
   toefl: string;
   eiken: string;
   otherLanguage: string;

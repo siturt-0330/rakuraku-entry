@@ -44,7 +44,6 @@
   "P-Talentio 風（Rails）：candidate[...] の name・date_select の (1i)(2i)(3i)・「1月」の月・Rails の hidden・自由記述",
   "P-Google フォーム：name のない欄（aria-labelledby）・role=\"radio\" の性別・role=\"listbox\" の都道府県・説明文で「ハイフンなし」・日付・段落",
   "P-Google フォーム（切り出し）：role=\"radio\" だけの性別（女性）",
-  "P-Microsoft Forms：番号つきの見出し（aria-labelledby）・「回答を入力してください」・ネイティブのラジオ・学年のラジオには触らない",
   "P-Microsoft Forms（切り出し）：role=\"combobox\" の日付の文字欄（カレンダーが開き、離れると yyyy/M/d に整え直す）",
   "P-formrun（埋め込みコード）：日本語の name、for のない label、非表示のエラー文、_formrun_gotcha、同意チェック",
   "P-Tayori 風：form-item のラベル div、サブラベルつきの姓・名／セイ・メイ、郵便番号＋住所1欄、ラジオの希望日程",

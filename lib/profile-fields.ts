@@ -1,5 +1,5 @@
 import type { ProfilePage } from './fieldKeys';
-import { BUNRI, DEGREES, FIELD_CATEGORIES, PREFECTURES, SCHOOL_TYPES } from './prefectures';
+import { ADVISOR_TITLES, BUNRI, DEGREES, FIELD_CATEGORIES, PREFECTURES, SCHOOL_TYPES } from './prefectures';
 import type { Profile } from './types';
 
 type StringKey = { [K in keyof Profile]-?: Profile[K] extends string ? K : never }[keyof Profile];
@@ -167,6 +167,7 @@ export const PROFILE_PAGES: PageDef[] = [
           { key: 'degree', label: '学位', type: 'select', options: [['', '選択してください'], ...DEGREES] },
           { key: 'lab', label: '研究室・ゼミ', placeholder: '山本ゼミ' },
           { key: 'advisor', label: '指導教員', placeholder: '山本 一郎' },
+          { key: 'advisorTitle', label: '指導教員の職位', type: 'select', options: [['', '選択してください'], ...ADVISOR_TITLES] },
           { key: 'researchTheme', label: '研究テーマ', type: 'textarea', wide: true },
         ],
       },
@@ -205,6 +206,8 @@ export const PROFILE_PAGES: PageDef[] = [
           { key: 'driverLicenseDate', label: '免許の取得年月', type: 'month' },
           { key: 'toeic', label: 'TOEIC スコア', placeholder: '780' },
           { key: 'toeicDate', label: 'TOEIC 受験年月', type: 'month' },
+          { key: 'toeicListening', label: 'TOEIC リスニング', placeholder: '400' },
+          { key: 'toeicReading', label: 'TOEIC リーディング', placeholder: '380' },
         ],
         detailLabel: 'その他の語学・資格・PC スキル',
         detail: [

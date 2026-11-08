@@ -862,7 +862,7 @@ export const CASES: Case[] = [
       '[name=q5]': '飲食店ホール（3年）',
       'radio:q6': 'ない',
       'radio:q8': '持っている',
-      'radio:q9': '',
+      'radio:q9': '持っていない',
     },
   },
   {

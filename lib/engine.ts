@@ -144,6 +144,8 @@ function stillSelected(r: Result): boolean {
 
 /** 「（大学院生以外の方は「なし」とご記載ください）」「該当しない場合は『なし』と入力」 */
 const SAYS_WRITE_NONE = /[「『"”]?(なし|無し|ナシ)[」』"”]?と(ご)?(記載|記入|入力|書い|お書き)(?!せず|しない|しないで|不要|は不要)/;
+/** 「決まっていない場合は『未定』とご記入ください」（研究テーマなど）。プロフィールが空の人だけに入れる */
+const SAYS_WRITE_UNDECIDED = /[「『"”](未定|検討中)[」』"”]と(ご)?(記載|記入|入力|書い|お書き)(?!せず|しない|しないで|不要|は不要)/;
 
 /** 「※大学院に所属している方のみ」のような条件付きの欄と、その条件をプロフィールが満たすか */
 const isGrad = (p: Profile) => p.schoolType.startsWith('大学院');
@@ -228,7 +230,8 @@ function applyConditions(fields: ScannedField[], classes: Classification[], prof
       return;
     }
     // 条件に合っていても、プロフィールが空（研究室が未定など）なら「なし」
-    if (writeNone) classes[i] = { ...c, ifEmpty: writeNone };
+    const undecided = /^(text|textarea)$/.test(d.kind) ? SAYS_WRITE_UNDECIDED.exec(text)?.[1] : undefined;
+    if (writeNone || undecided) classes[i] = { ...c, ifEmpty: undecided ?? writeNone };
     if (c.key === 'highSchool') owner = { kind: 'high', index: i };
     else if (/^(school|schoolKana|faculty|department|lab)$/.test(c.key)) owner = { kind: 'current', index: i };
     else if (/^graduation(Year|Month)?$/.test(c.key) && i - owner.index <= OWNER_DISTANCE) {

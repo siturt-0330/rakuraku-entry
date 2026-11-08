@@ -18,7 +18,7 @@ export interface Classification {
 
 type Category =
   | 'emailConfirm' | 'emailSub' | 'email' | 'relation' | 'station' | 'age' | 'nationality'
-  | 'schoolType' | 'schoolInitial' | 'schoolOwnership' | 'bunri' | 'graduationStatus' | 'fieldCategory' | 'degree' | 'researchTheme' | 'lab' | 'campus'
+  | 'schoolType' | 'schoolInitial' | 'schoolOwnership' | 'bunri' | 'graduationStatus' | 'fieldCategory' | 'degree' | 'researchTheme' | 'lab' | 'campus' | 'grade'
   | 'highSchool' | 'admission' | 'educationHistory'
   | 'license' | 'toeic' | 'toefl' | 'eiken' | 'otherLanguage' | 'qualifications' | 'pcSkills'
   | 'club' | 'studyAbroad' | 'partTime' | 'hobbies' | 'specialSkills' | 'github' | 'portfolio'
@@ -39,6 +39,9 @@ function optionCategory(d: FieldDescriptor): Category | null {
   if (opts.filter((o) => PREFECTURE_RE.test(o)).length >= 7) return 'prefecture';
   // あ・か・さ… の五十音（学校名の頭文字など）
   if (opts.length >= 20 && opts.filter((o) => /^[ぁ-んァ-ン]$/.test(o)).length >= opts.length * 0.8) return 'schoolInitial';
+  // 「学部1年／学部2年／修士1年」は学年の選択肢（学校区分ではない）
+  // 「2026年」のような年の選択肢と取り違えないよう、1 桁の学年だけを数える
+  if (opts.filter((o) => /^(学部|大学|大学院|修士|博士|院)?[1-9](年生?|回生)$|^[BMD][1-9]$/.test(o)).length >= opts.length / 2) return 'grade';
   if (opts.some((o) => /^大学$|^大学\(|学部/.test(o)) && opts.some((o) => /大学院|短期大学|短大|高専|高等専門学校|専門学校/.test(o) || (/修士|博士/.test(o) && !opts.some((x) => /^学士/.test(x))))) {
     return 'schoolType';
   }
@@ -94,6 +97,8 @@ const TEXT_RULES: [Category, RegExp][] = [
   ['researchTheme', /研究テーマ|研究内容|研究課題|卒業論文|卒論|卒業研究|修士論文|修論/],
   ['lab', /研究室|ゼミ|指導教員|指導教官|指導教授/],
   ['highSchool', /高校|高等学校/],
+  // 「入学年月」の「学年」は学年ではない
+  ['grade', /(?<!入)学年(?!度|月)|回生/],
   ['admission', /入学|進学(年月|時期)/],
   ['educationHistory', /(?<!最終)学歴/],
   ['license', /運転免許|自動車免許|普通免許|車の免許/],
@@ -482,12 +487,22 @@ function classifyField(d: FieldDescriptor): Classification {
       return /学校名|最終学歴/.test(near) ? r('school', Math.min(conf, 0.85)) : result(null, 0);
     case 'campus':
       return r('campus');
+    case 'grade':
+      return r('grade');
     case 'lab':
+      // 「指導教官の職位」「指導教員の役職」は教授・准教授などを選ぶ欄
+      if (has(/職位|役職|肩書|職名/) && has(/教員|教官|教授|先生/)) return r('advisorTitle');
       return r(has(/教員|教官|教授|先生/) ? 'advisor' : 'lab');
     case 'license':
       return r(isDateLike(d, near) ? 'driverLicenseDate' : 'driverLicense');
     case 'toeic':
-      return r(isDateLike(d, near) ? 'toeicDate' : 'toeic');
+      // 「TOEICスコアを取得していますか？［取得している／取得していない］」は有無（「取得」で年月と見ない）
+      if (isYesNo(d)) return r('toeic');
+      if (isDateLike(d, near)) return r('toeicDate');
+      // 「TOEICスコア（リスニング）」「（リーディング）」は合計とは別の欄
+      if (has(/リスニング|listening/)) return r('toeicListening');
+      if (has(/リーディング|reading/)) return r('toeicReading');
+      return r('toeic');
     case 'club':
       return r(has(/役職|役割|ポジション/) ? 'clubRole' : 'club');
     case 'hobbies':
