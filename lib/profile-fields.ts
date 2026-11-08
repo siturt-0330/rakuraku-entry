@@ -139,6 +139,7 @@ export const PROFILE_PAGES: PageDef[] = [
           },
           { key: 'faculty', label: '学部・研究科', placeholder: '経済学部' },
           { key: 'department', label: '学科・専攻', placeholder: '経済学科' },
+          { key: 'campus', label: 'キャンパス', placeholder: '淀屋橋', hint: '「キャンパス」は付けずに書きます' },
           { key: 'admission', label: '入学年月', type: 'month' },
           { key: 'graduation', label: '卒業（見込み）年月', type: 'month' },
           {

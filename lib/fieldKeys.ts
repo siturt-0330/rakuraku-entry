@@ -104,6 +104,7 @@ export const FIELD_KEYS = {
   graduationMonth: k('education', '卒業月', '卒業（見込み）年月の「月」だけの欄'),
   graduationStatus: k('education', '卒業区分', '卒業見込みか卒業済みか（新卒・既卒）の区分'),
   lab: k('education', '研究室・ゼミ', '所属している研究室・ゼミの名前'),
+  campus: k('education', 'キャンパス', '通っているキャンパスの名前（「キャンパス」は付けない）'),
   advisor: k('education', '指導教員', '研究室・ゼミの指導教員の名前'),
   researchTheme: k('education', '研究テーマ', '研究テーマ・卒業論文のテーマ'),
   highSchool: k('education', '高校名', '出身高校の名前'),

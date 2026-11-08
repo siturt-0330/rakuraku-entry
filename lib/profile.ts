@@ -52,6 +52,7 @@ export function emptyProfile(label = '新しいプロフィール'): Profile {
     graduation: '',
     graduationStatus: 'expected',
     lab: '',
+    campus: '',
     advisor: '',
     researchTheme: '',
     highSchool: '',

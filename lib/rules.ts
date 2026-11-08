@@ -18,7 +18,7 @@ export interface Classification {
 
 type Category =
   | 'emailConfirm' | 'emailSub' | 'email' | 'relation' | 'station' | 'age' | 'nationality'
-  | 'schoolType' | 'schoolInitial' | 'schoolOwnership' | 'bunri' | 'graduationStatus' | 'fieldCategory' | 'degree' | 'researchTheme' | 'lab'
+  | 'schoolType' | 'schoolInitial' | 'schoolOwnership' | 'bunri' | 'graduationStatus' | 'fieldCategory' | 'degree' | 'researchTheme' | 'lab' | 'campus'
   | 'highSchool' | 'admission' | 'educationHistory'
   | 'license' | 'toeic' | 'toefl' | 'eiken' | 'otherLanguage' | 'qualifications' | 'pcSkills'
   | 'club' | 'studyAbroad' | 'partTime' | 'hobbies' | 'specialSkills' | 'github' | 'portfolio'
@@ -78,6 +78,8 @@ const TEXT_RULES: [Category, RegExp][] = [
   ['emailConfirm', /(メール|e-?mail|mail).*(確認|再入力|もう一度|confirm)|(確認|confirm).*(メール|e-?mail)/],
   ['emailSub', /(予備|サブ|携帯|第2|2つ目|セカンド).{0,4}(メール|mail)|(メール|mail).{0,6}(予備|サブ|2)|(携帯|モバイル|スマホ|サブ|予備).{0,3}アドレス/],
   ['email', /メール|e-?mail|mail/],
+  // 「キャンパス名が無い場合、最寄り駅『〇〇駅』と記載」のように駅の話が続くので、駅より先に見る
+  ['campus', /キャンパス|campus/],
   ['relation', /続柄|間柄|ご関係/],
   ['station', /最寄|沿線|路線|駅/],
   ['age', /年齢|^age$/],
@@ -147,6 +149,7 @@ const ATTR_RULES: [Category, RegExp][] = [
   ['schoolType', /school_?type|gakko_?kubun/],
   ['bunri', /bunri/],
   ['lab', /(^|[^a-z])(lab|zemi|seminar)/],
+  ['campus', /campus/],
   ['highSchool', /high_?school|koko/],
   ['admission', /admission|enroll|nyugaku/],
   ['license', /license|menkyo/],
@@ -477,6 +480,8 @@ function classifyField(d: FieldDescriptor): Classification {
       if (d.kind === 'select' || d.kind === 'radio') return r('schoolType');
       // 履歴書形式の「学歴・職歴」の1行の欄には入れない（「最終学歴」「学校名」とはっきり書かれていれば学校名）
       return /学校名|最終学歴/.test(near) ? r('school', Math.min(conf, 0.85)) : result(null, 0);
+    case 'campus':
+      return r('campus');
     case 'lab':
       return r(has(/教員|教官|教授|先生/) ? 'advisor' : 'lab');
     case 'license':

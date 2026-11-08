@@ -77,6 +77,8 @@ export interface Profile {
   graduation: string;
   graduationStatus: GraduationStatus;
   lab: string;
+  /** キャンパス名。「キャンパス」は付けない（淀屋橋） */
+  campus: string;
   advisor: string;
   researchTheme: string;
   highSchool: string;

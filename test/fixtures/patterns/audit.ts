@@ -84,4 +84,22 @@ export const CASES: Case[] = [
     html: `<form><table><tr><th>入学年月</th><td><input name="a" placeholder="2022-04"></td></tr></table></form>`,
     expect: { '[name=a]': '2022-04' },
   },
+  // キャンパス名・学科系統（2026-11-08 に本人の画面から）
+  {
+    name: 'A-15 設問「大学のキャンパス名（キャンパスの文言は不要）」：最寄り駅の話があっても駅ではなくキャンパス名',
+    html: `<form><table><tr><th>設問 6</th><td><p>大学のキャンパス名を記入してください。</p><p>キャンパス名のみ記載ください。（キャンパスの文言は不要）</p><p>例）住友大学　淀屋橋キャンパスの場合→淀屋橋</p><p>※キャンパス名が無い場合、最寄り駅「○○駅」と記載してください。</p><input name="c"></td></tr></table></form>`,
+    profile: { campus: '本郷キャンパス', station: '渋谷駅' },
+    expect: { '[name=c]': '本郷' },
+  },
+  {
+    name: 'A-16 学科系統が空なら、学科（経済学科）から選ぶ',
+    html: `<form><table><tr><th>学科系統</th><td>${sel('fc', ['人文・教養・総合科学系', '社会科学系', '理学系', '工学系'])}</td></tr></table></form>`,
+    expect: { '[name=fc]': '社会科学系' },
+  },
+  {
+    name: 'A-17 学科系統：理工学部 機械工学科は工学系',
+    html: `<form><table><tr><th>学科系統</th><td>${sel('fc', ['人文科学系', '社会科学系', '理学系', '工学系'])}</td></tr></table></form>`,
+    profile: { faculty: '理工学部', department: '機械工学科' },
+    expect: { '[name=fc]': '工学系' },
+  },
 ];

@@ -452,7 +452,9 @@ function rawVariants(key: FieldKey, p: Profile, h: Hints, kind: FieldKind): stri
     case 'department':
       return [p.department];
     case 'fieldCategory':
-      return [p.fieldCategory, p.fieldCategory.replace(/（.*）/, '')];
+      if (p.fieldCategory) return [p.fieldCategory, p.fieldCategory.replace(/（.*）/, '')];
+      // 学科系統が空なら、学科・学部の名前から推測する（サイトごとに選択肢の名前が違うので、言葉の部分一致で選ばせる）
+      return guessFieldCategory(`${p.department} ${p.faculty}`);
     case 'degree':
       return DEGREE_VARIANTS[p.degree] ?? [p.degree];
     case 'admission':
@@ -476,6 +478,11 @@ function rawVariants(key: FieldKey, p: Profile, h: Hints, kind: FieldKind): stri
       return [];
     case 'lab':
       return [p.lab];
+    case 'campus': {
+      // 「キャンパス名のみ（キャンパスの文言は不要）」が多いので、付けない形を先にする
+      const bare = p.campus.replace(/s*キャンパス$/, '').trim();
+      return bare ? [bare, `${bare}キャンパス`] : [];
+    }
     case 'advisor':
       return [p.advisor];
     case 'researchTheme':
@@ -631,4 +638,29 @@ export function valueVariants(key: FieldKey, p: Profile, h: Hints, kind: FieldKi
   if (h.width === 'full') return uniq(values.map(toFullWidth));
   if (h.width === 'half') return uniq(values.map(toHalfWidthAscii));
   return values;
+}
+
+/**
+ * 学部・学科の名前から学科系統の候補。先に当たったものを使う（「理工学部」は工学、「経済学部」は社会科学の経済）。
+ * 候補はサイトの選択肢（「社会科学系（経済・経営・商）」「経済・経営・商学系」「社会科学系」）に部分一致させる言葉
+ */
+const FIELD_GUESS: [RegExp, string[]][] = [
+  [/医|歯|薬|看護|保健|リハビリ|臨床|衛生/, ['医療・保健系', '医療', '保健', '医・歯・薬', '医歯薬']],
+  [/教育|教員|保育|児童/, ['教育系', '教育']],
+  [/芸術|美術|音楽|デザイン|映像|体育|スポーツ/, ['芸術・体育系', '芸術', '体育']],
+  [/家政|生活|栄養|食物|被服|服飾/, ['家政・生活系', '家政', '生活']],
+  [/農|水産|獣医|畜産|森林|生物資源/, ['農学・水産系', '農学', '農', '水産']],
+  [/工|情報|建築|機械|電気|電子|システム/, ['工学系', '工学', '工', '理工']],
+  [/理|数|物理|化学|生物|地学|生命|環境科/, ['理学系', '理学', '理', '理工']],
+  [/法|政治|政策|行政/, ['社会科学系（法・政治）', '法・政治', '法学', '法', '政治', '社会科学']],
+  [/経済|経営|商|会計|ビジネス|マネジメント|金融|流通/, ['社会科学系（経済・経営・商）', '経済・経営・商', '経済', '経営', '商', '社会科学']],
+  [/社会|福祉|観光|メディア|コミュニケーション|心理/, ['社会科学系（社会・その他）', '社会', '社会科学']],
+  [/文|人文|言語|語学|外国語|英語|史|哲|宗教|文化/, ['人文科学系', '人文科学', '人文', '文学']],
+  [/国際|総合|教養|学際|リベラルアーツ/, ['総合・学際系', '総合', '学際', '教養']],
+];
+
+function guessFieldCategory(name: string): string[] {
+  const t = name.normalize('NFKC');
+  if (!t.trim()) return [];
+  return FIELD_GUESS.find(([re]) => re.test(t))?.[1] ?? [];
 }
